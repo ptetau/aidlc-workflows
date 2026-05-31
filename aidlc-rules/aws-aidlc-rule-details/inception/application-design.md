@@ -40,7 +40,7 @@ Application Design focuses on:
 ### 4. Generate Context-Appropriate Questions
 **DIRECTIVE**: Analyze the requirements and stories to generate questions relevant to THIS specific application design. Use the categories below as guidance. Evaluate each category and, when in doubt about applicability, ask the question rather than skipping it — overconfidence leads to poor outcomes (see overconfidence-prevention.md).
 
-- EMBED questions using [Answer]: tag format
+- Gather this input via the inline quiz-style interview (one question card per turn) per `common/question-format-guide.md` — do NOT embed `[Answer]:` tags or wait on a file
 - Focus on ANY ambiguities, missing information, or areas needing clarification
 - Generate questions wherever user input would improve design decisions
 - **When in doubt, ask the question** - overconfidence leads to poor designs
@@ -54,18 +54,16 @@ Application Design focuses on:
 
 ### 5. Store Application Design Plan
 - Save as `aidlc-docs/inception/plans/application-design-plan.md`
-- Include all [Answer]: tags for user input
+- Record the interview answers into this plan document (no `[Answer]:` tags needed)
 - Ensure plan covers all design aspects
 
 ### 6. Request User Input
-- Ask user to fill [Answer]: tags directly in the plan document
-- Emphasize importance of design decisions
-- Provide clear instructions on completing the [Answer]: tags
+- Conduct the inline quiz-style interview (one card per turn) to elicit the design decisions; emphasize their importance as you go
+- Record raw replies to `audit.md` and synthesize them into the plan document
 
 ### 7. Collect Answers
-- Wait for user to provide answers to all questions using [Answer]: tags in the document
-- Do not proceed until ALL [Answer]: tags are completed
-- Review the document to ensure no [Answer]: tags are left blank
+- Complete the interview round(s) and confirm the final resolved view before proceeding
+- Do not proceed until every needed decision is answered (or the user explicitly says to proceed)
 
 ### 8. ANALYZE ANSWERS (MANDATORY)
 Before proceeding, you MUST carefully review all user answers for:
@@ -77,7 +75,7 @@ Before proceeding, you MUST carefully review all user answers for:
 
 ### 9. MANDATORY Follow-up Questions
 If the analysis in step 8 reveals ANY ambiguous answers, you MUST:
-- Add specific follow-up questions to the plan document using [Answer]: tags
+- Ask specific follow-up questions inline (a follow-up quiz card, or one plain-prose question for a single straggler) and record the answers into the plan document
 - DO NOT proceed to approval until all ambiguities are resolved
 - Examples of required follow-ups:
   - "You mentioned 'mix of A and B' - what specific criteria should determine when to use A vs B?"

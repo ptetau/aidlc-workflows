@@ -106,22 +106,18 @@ After receiving answers:
 
 2. **Deferred Rule Loading**: For each extension the user opted IN, load the full rules file now. The rules file is derived by naming convention: strip `.opt-in.md` from the opt-in filename and append `.md` (e.g., `security-baseline.opt-in.md` → `security-baseline.md`). For extensions the user opted OUT, do NOT load the full rules file.
 
-### Step 6: Generate Clarifying Questions (PROACTIVE APPROACH)
-   - **ALWAYS** create `aidlc-docs/inception/requirements/requirement-verification-questions.md` unless requirements are exceptionally clear and complete
-   - Ask questions about ANY missing, unclear, or ambiguous areas
-   - Focus on functional requirements, non-functional requirements, user scenarios, and business context
-   - Request user to fill in all [Answer]: tags directly in the questions document
-   - If presenting multiple-choice options for answers:
-     - Label the options as A, B, C, D etc.
-     - Ensure options are mutually exclusive and don't overlap
-     - ALWAYS include option for custom response: "X) Other (please describe after [Answer]: tag below)"
-   - Wait for user answers in the document
-   - **MANDATORY**: Analyze ALL answers for ambiguities and create follow-up questions if needed
-   - **MANDATORY**: Keep asking questions until ALL ambiguities are resolved OR user explicitly asks to proceed
+### Step 6: Conduct the Clarifying Interview (PROACTIVE APPROACH)
+   - **ALWAYS** interview the user for missing/unclear requirements unless requirements are exceptionally clear and complete. Use the **inline quiz-style interview** (one question card per turn) defined in `common/question-format-guide.md` — do NOT create a `requirement-verification-questions.md` file (that is the escalation fallback only; see below).
+   - Ask about ANY missing, unclear, or ambiguous areas, covering functional requirements, non-functional requirements, user scenarios, and business context. Most load-bearing questions first.
+   - Each card: mutually-exclusive labelled options (`A · …`, `B · …`), with `X · other` ALWAYS the last option for a custom reply.
+   - Run in rounds of ≤7 cards; for comprehensive depth, run multiple rounds, pausing at each round's resolved-view confirmation.
+   - **Record as you go**: append raw replies to `audit.md`; optionally keep `aidlc-docs/inception/requirements/requirement-verification-interview.md` as a transcript artifact.
+   - **MANDATORY**: Analyze ALL answers for contradictions/ambiguities and resolve them inline (a follow-up card or one plain-prose question) before proceeding.
+   - **MANDATORY**: Keep interviewing until ALL ambiguities are resolved OR the user explicitly asks to proceed.
+   - **Escalation fallback**: if there are 8+ tightly-coupled questions, or options need visual previews, offer (one sentence) to render them as a fill-in `requirement-verification-questions.md` file (`[Answer]:` tags) or a `/squiz` doc instead of card-by-card.
 
-### ⛔ GATE: Await User Answers
-DO NOT proceed to Step 7 until all questions in requirement-verification-questions.md are answered and validated.
-Present the question file to the user and STOP.
+### ⛔ GATE: Await Interview Answers
+DO NOT proceed to Step 7 until the interview round(s) are complete, the final resolved view is confirmed by the user (no `wait`), and answers are recorded. If the escalation fallback file was used, all its `[Answer]:` tags must be filled and validated.
 
 ### Step 7: Generate Requirements Document
    - **PREREQUISITE**: Step 6 gate must be passed — all answers received and analyzed

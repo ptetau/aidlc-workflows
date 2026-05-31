@@ -128,7 +128,7 @@ For medium priority cases, execute user stories if ANY of these apply:
 
 **See `common/question-format-guide.md` for question formatting rules**
 
-- EMBED questions using [Answer]: tag format
+- Gather this input via the inline quiz-style interview (one question card per turn) per `common/question-format-guide.md` — do NOT embed `[Answer]:` tags or wait on a file
 - Focus on ANY ambiguities, missing information, or areas needing clarification
 - Generate questions wherever user input would improve story creation decisions
 - **When in doubt, ask the question** - overconfidence leads to poor stories
@@ -162,21 +162,18 @@ For medium priority cases, execute user stories if ANY of these apply:
 - Allow for hybrid approaches with clear decision criteria
 
 ## Step 6: Store Story Plan
-- Save the complete story plan with embedded questions in `aidlc-docs/inception/plans/` directory
+- Save the story plan in `aidlc-docs/inception/plans/` directory
 - Filename: `story-generation-plan.md`
-- Include all [Answer]: tags for user input
+- Record the interview answers into this plan document (no `[Answer]:` tags needed)
 - Ensure plan is comprehensive and covers all story development aspects
 
 ## Step 7: Request User Input
-- Ask user to fill in all [Answer]: tags directly in the story plan document
-- Emphasize importance of audit trail and decision documentation
-- Provide clear instructions on how to fill in the [Answer]: tags
-- Explain that all questions must be answered before proceeding
+- Conduct the inline quiz-style interview (one card per turn) to elicit the story-planning decisions
+- Emphasize the importance of the audit trail: record raw replies to `audit.md` and synthesize them into the plan document
 
 ## Step 8: Collect Answers
-- Wait for user to provide answers to all questions using [Answer]: tags in the document
-- Do not proceed until ALL [Answer]: tags are completed
-- Review the document to ensure no [Answer]: tags are left blank
+- Complete the interview round(s) and confirm the final resolved view before proceeding
+- Do not proceed until every needed decision is answered (or the user explicitly says to proceed)
 
 ## Step 9: ANALYZE ANSWERS (MANDATORY)
 Before proceeding, you MUST carefully review all user answers for:
@@ -190,7 +187,7 @@ Before proceeding, you MUST carefully review all user answers for:
 
 ## Step 10: MANDATORY Follow-up Questions
 If the analysis in step 9 reveals ANY ambiguous answers, you MUST:
-- Create a separate clarification questions file using [Answer]: tags
+- Ask the clarification questions inline (follow-up quiz cards, or one plain-prose question per straggler) and record the answers into the story plan document
 - DO NOT proceed to approval until ALL ambiguities are completely resolved
 - **CRITICAL**: Be thorough - ask follow-up questions for every unclear response
 - Examples of required follow-ups:

@@ -57,13 +57,15 @@ All subsequent rule detail file references (e.g., `common/process-overview.md`, 
 - Provide text alternatives for complex visual content
 - Test content parsing compatibility
 
-## MANDATORY: Question File Format
-**CRITICAL**: When asking questions at any phase, you MUST follow question format guidelines.
+## MANDATORY: Interview Format (quiz-style)
+**CRITICAL**: When you need any content/clarification from the user at any phase, you MUST gather it by **interviewing the user inline, one quiz-style question card per turn** — NOT by creating `{phase}-questions.md` files and waiting for `[Answer]:` tags. This applies to every stage.
 
-**See `common/question-format-guide.md` for complete question formatting rules including**:
-- Multiple choice format (A, B, C, D, E options)
-- [Answer]: tag usage
-- Answer validation and ambiguity resolution
+**See `common/question-format-guide.md` for the complete interview protocol, including**:
+- The one-card-per-turn quiz interview (ASCII card, single-letter reply, `[✓]` echo, next card, final resolved view)
+- The OVERRIDE clause: it supersedes any stage rule that says to "create a question file", "embed `[Answer]:` tags", or "never ask in chat"
+- Mandatory "Other" option, option-quality, contradiction/ambiguity detection
+- Recording answers (raw → `audit.md`, synthesized → the stage doc, optional `*-interview.md` transcript)
+- The file/`/squiz` fallback for 8+ coupled or visual questions
 
 ## MANDATORY: Custom Welcome Message
 **CRITICAL**: When starting ANY software development request, you MUST display the welcome message.

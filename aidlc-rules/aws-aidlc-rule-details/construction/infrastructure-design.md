@@ -27,7 +27,7 @@ Map logical software components to actual infrastructure choices for deployment 
 
 **MANDATORY**: Evaluate ALL of the following categories by asking targeted questions about each. For each category, determine applicability based on evidence from the functional and NFR design artifacts -- do not skip categories without explicit justification:
 
-- EMBED questions using [Answer]: tag format
+- Gather this input via the inline quiz-style interview (one question card per turn) per `common/question-format-guide.md` — do NOT embed `[Answer]:` tags or wait on a file
 - Focus on ANY ambiguities, missing information, or areas needing clarification
 - Generate questions wherever user input would improve infrastructure decisions
 - **When in doubt, ask the question** - overconfidence leads to poor infrastructure choices
@@ -43,10 +43,10 @@ Map logical software components to actual infrastructure choices for deployment 
 
 ### Step 4: Store Plan
 - Save as `aidlc-docs/construction/plans/{unit-name}-infrastructure-design-plan.md`
-- Include all [Answer]: tags for user input
+- Record the interview answers into this plan document (no `[Answer]:` tags needed)
 
 ### Step 5: Collect and Analyze Answers
-- Wait for user to complete all [Answer]: tags
+- Complete the interview round(s) and confirm the resolved view before proceeding (append raw replies to `audit.md`)
 - Review for vague or ambiguous responses
 - Add follow-up questions if needed
 

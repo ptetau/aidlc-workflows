@@ -32,7 +32,7 @@ The model considers these factors when determining appropriate detail:
 ## Example: Requirements Analysis Artifacts
 
 **All scenarios create the same artifacts**:
-- `requirement-verification-questions.md` (if needed)
+- the clarifying-questions **interview** (recorded in `audit.md`; optional `requirement-verification-interview.md` transcript) — or a `requirement-verification-questions.md` fallback file if the escalation fallback was used
 - `requirements.md`
 
 **Note**: User's initial request is captured in `audit.md` (no separate user-intent.md needed)
@@ -40,11 +40,11 @@ The model considers these factors when determining appropriate detail:
 **Detail level varies by complexity**:
 
 ### Simple Scenario (Bug Fix)
-- **requirement-verification-questions.md**: necessary clarifying questions
+- **clarifying interview**: a few necessary clarifying cards (one round)
 - **requirements.md**: Concise functional requirement, minimal sections
 
 ### Complex Scenario (System Migration)
-- **requirement-verification-questions.md**: Multiple rounds, 10+ questions
+- **clarifying interview**: multiple rounds, 10+ cards total
 - **requirements.md**: Comprehensive functional + non-functional requirements, traceability, acceptance criteria
 
 ## Example: Application Design Artifacts

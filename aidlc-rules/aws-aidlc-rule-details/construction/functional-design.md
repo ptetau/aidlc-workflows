@@ -37,7 +37,7 @@ Design detailed business logic for the unit, technology-agnostic and focused pur
 
 **CRITICAL**: Default to asking questions when there is ANY ambiguity or missing detail that could affect functional design quality. It's better to ask too many questions than to make incorrect assumptions.
 
-- EMBED questions using [Answer]: tag format
+- Gather this input via the inline quiz-style interview (one question card per turn) per `common/question-format-guide.md` — do NOT embed `[Answer]:` tags or wait on a file
 - Focus on ANY ambiguities, missing information, or areas needing clarification
 - Generate questions wherever user input would improve functional design decisions
 - **When in doubt, ask the question** - overconfidence leads to poor designs
@@ -54,10 +54,10 @@ Design detailed business logic for the unit, technology-agnostic and focused pur
 
 ### Step 4: Store Plan
 - Save as `aidlc-docs/construction/plans/{unit-name}-functional-design-plan.md`
-- Include all [Answer]: tags for user input
+- Record the interview answers into this plan document (no `[Answer]:` tags needed)
 
 ### Step 5: Collect and Analyze Answers
-- Wait for user to complete all [Answer]: tags
+- Complete the interview round(s) and confirm the resolved view before proceeding (append raw replies to `audit.md`)
 - **MANDATORY**: Carefully review ALL responses for vague or ambiguous answers
 - **CRITICAL**: Add follow-up questions for ANY unclear responses - do not proceed with ambiguity
 - Look for responses like "depends", "maybe", "not sure", "mix of", "somewhere between"

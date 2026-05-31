@@ -24,7 +24,7 @@ Determine non-functional requirements for the unit and make tech stack choices.
 
 **CRITICAL**: Default to asking questions when there is ANY ambiguity or missing detail that could affect system quality. It's better to ask too many questions than to make incorrect NFR assumptions.
 
-- EMBED questions using [Answer]: tag format
+- Gather this input via the inline quiz-style interview (one question card per turn) per `common/question-format-guide.md` — do NOT embed `[Answer]:` tags or wait on a file
 - Focus on ANY ambiguities, missing information, or areas needing clarification
 - Generate questions wherever user input would improve NFR and tech stack decisions
 - **When in doubt, ask the question** - overconfidence leads to poor system quality
@@ -41,10 +41,10 @@ Determine non-functional requirements for the unit and make tech stack choices.
 
 ### Step 4: Store Plan
 - Save as `aidlc-docs/construction/plans/{unit-name}-nfr-requirements-plan.md`
-- Include all [Answer]: tags for user input
+- Record the interview answers into this plan document (no `[Answer]:` tags needed)
 
 ### Step 5: Collect and Analyze Answers
-- Wait for user to complete all [Answer]: tags
+- Complete the interview round(s) and confirm the resolved view before proceeding (append raw replies to `audit.md`)
 - **MANDATORY**: Carefully review ALL responses for vague or ambiguous answers
 - **CRITICAL**: Add follow-up questions for ANY unclear responses - do not proceed with ambiguity
 - Look for responses like "depends", "maybe", "not sure", "mix of", "somewhere between", "standard", "typical"

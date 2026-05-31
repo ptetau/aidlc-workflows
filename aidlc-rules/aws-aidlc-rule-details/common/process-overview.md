@@ -22,8 +22,8 @@
 • **No fixed sequences**: Stages execute in the order that makes sense for your specific task
 
 ## Your Team's Role:
-• **Answer questions** in dedicated question files using [Answer]: tags with letter choices (A, B, C, D, E)
-• **Option E available**: Choose "Other" and describe your custom response if provided options don't match
+• **Answer questions** in an inline quiz-style interview — one question card at a time — by replying with the option letter (e.g. `B`, or `B, with notes: …`)
+• **"Other" always available**: reply `X` and describe your custom response if the provided options don't match
 • **Work as a team** to review and approve each phase before proceeding
 • **Collectively decide** on architectural approach when needed
 • **Important**: This is a team effort - involve relevant stakeholders for each phase

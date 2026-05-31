@@ -14,7 +14,7 @@
 
 ### 1.2 Load Requirements Analysis
 - requirements.md (includes intent analysis)
-- requirement-verification-questions.md (with answers)
+- requirement-verification-interview.md (interview transcript, if produced) — or the recorded answers in audit.md / the requirement-verification-questions.md fallback file if one was used
 
 ### 1.3 Load User Stories (if executed)
 - stories.md
