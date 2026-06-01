@@ -166,6 +166,39 @@ test('Stories outline: readiness + human marker, inline criteria editing', async
   assert.deepEqual(page.__errors, []);
 });
 
+test('Documents: edit a prose doc → writes markdown + ledger entry; engine docs read-only', async (t) => {
+  const app = await openApp();
+  t.after(app.cleanup);
+  const root = dirname(app.ws);
+  const { mkdirSync } = await import('node:fs');
+  mkdirSync(join(root, 'inception', 'reverse-engineering'), { recursive: true });
+  writeFileSync(join(root, 'inception', 'reverse-engineering', 'architecture.md'), '# Architecture\n\nOld prose.\n');
+  writeFileSync(join(root, 'audit.md'), '# Audit\n\nlog\n');
+  const { page, ws } = app;
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('nav button', { hasText: 'Documents' }).first().click();
+  await page.waitForTimeout(400);
+  // editable prose doc (click by unique filename in the doc list, not the nav item)
+  await page.getByText('architecture.md').first().click();
+  await page.waitForTimeout(300);
+  await page.getByRole('button', { name: /^Edit$/ }).first().click();
+  await page.waitForTimeout(150);
+  const ta = page.locator('textarea').first();
+  await ta.fill('# Architecture\n\nNew prose.\n');
+  await page.getByRole('button', { name: /^Save$/ }).first().click();
+  await page.waitForSelector('.toast', { timeout: 4000 });
+  const { readFileSync } = await import('node:fs');
+  const onDisk = readFileSync(join(root, 'inception', 'reverse-engineering', 'architecture.md'), 'utf8');
+  assert.match(onDisk, /New prose/, 'markdown written to disk');
+  const ds = readDigests(ws);
+  assert.ok(ds.some(d => d.type === 'doc-edit'), 'doc-edit ledger entry recorded');
+  // engine doc is read-only (no Edit button)
+  await page.getByText('audit.md').first().click();
+  await page.waitForTimeout(300);
+  assert.ok(await page.getByText('read-only').first().isVisible(), 'engine doc marked read-only');
+  assert.deepEqual(page.__errors, []);
+});
+
 test('Overview gate: Approve records a gate event in the ledger', async (t) => {
   const app = await openApp();
   t.after(app.cleanup);

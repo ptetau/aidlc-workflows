@@ -101,6 +101,7 @@ func main() {
 	mux.HandleFunc("GET /api/project", handleProject) // read-only engine state (parsed aidlc-state.md)
 	mux.HandleFunc("GET /api/docs", handleDocs)        // all aidlc-docs/**/*.md outside workspace/
 	mux.HandleFunc("GET /api/doc", handleDoc)          // raw markdown of one doc
+	mux.HandleFunc("POST /api/doc", handleDocSave)     // write an edited (non-engine) markdown doc
 	mux.HandleFunc("GET /api/plans", handlePlans)      // checkbox progress of plan-like docs
 	mux.HandleFunc("POST /api/event", handleEvent)     // record a human decision (gate) as a ledger event
 	mux.Handle("/", http.FileServer(http.FS(sub)))

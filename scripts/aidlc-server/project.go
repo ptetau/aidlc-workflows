@@ -131,9 +131,26 @@ func handleProject(w http.ResponseWriter, r *http.Request) {
 }
 
 type docEntry struct {
-	Path  string `json:"path"`  // relative to aidlc-docs/
-	Title string `json:"title"`
-	Dir   string `json:"dir"`   // top-level grouping (e.g. "inception/requirements")
+	Path     string `json:"path"`  // relative to aidlc-docs/
+	Title    string `json:"title"`
+	Dir      string `json:"dir"` // top-level grouping (e.g. "inception/requirements")
+	Editable bool   `json:"editable"`
+}
+
+// engine-owned docs the UI must not write (markdown is the agent's execution state for these).
+func docEditable(rel string) bool {
+	rel = filepath.ToSlash(rel)
+	base := rel
+	if i := strings.LastIndex(rel, "/"); i >= 0 {
+		base = rel[i+1:]
+	}
+	if base == "aidlc-state.md" || base == "audit.md" {
+		return false
+	}
+	if strings.HasPrefix(rel, "plans/") || strings.Contains(rel, "/plans/") {
+		return false
+	}
+	return true
 }
 
 // listDocs walks aidlc-docs/ for *.md, excluding the workspace/ subtree (JSON-canonical there).
@@ -155,7 +172,7 @@ func listDocs() []docEntry {
 		}
 		rel, _ := filepath.Rel(root, p)
 		rel = filepath.ToSlash(rel)
-		out = append(out, docEntry{Path: rel, Title: docTitle(p, d.Name()), Dir: pathDir(rel)})
+		out = append(out, docEntry{Path: rel, Title: docTitle(p, d.Name()), Dir: pathDir(rel), Editable: docEditable(rel)})
 		return nil
 	})
 	return out
@@ -288,4 +305,58 @@ func handleDoc(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	_, _ = w.Write(data)
+}
+
+// resolveDocPath sanitizes a doc path to a real file within aidlc-docs/ (excluding workspace/).
+func resolveDocPath(rel string) (string, error) {
+	if rel == "" || !strings.HasSuffix(strings.ToLower(rel), ".md") {
+		return "", fmt.Errorf("path must be a .md file")
+	}
+	root := aidlcDocsRoot()
+	clean := filepath.Join(root, filepath.FromSlash(rel))
+	if r2, err := filepath.Rel(root, clean); err != nil || strings.HasPrefix(r2, "..") {
+		return "", fmt.Errorf("path escapes aidlc-docs")
+	}
+	if strings.HasPrefix(filepath.ToSlash(strings.TrimPrefix(clean, root)), "/workspace/") {
+		return "", fmt.Errorf("workspace docs are JSON-canonical")
+	}
+	return clean, nil
+}
+
+// handleDocSave writes an edited markdown artifact (markdown is canonical for these) and records a
+// `doc-edit` ledger entry so /aidlc ingest notices it. Engine-owned docs (state/audit/plans) are
+// read-only and rejected.
+func handleDocSave(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Path    string `json:"path"`
+		Content string `json:"content"`
+		Note    string `json:"note"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpError(w, http.StatusBadRequest, "bad request: %v", err)
+		return
+	}
+	clean, err := resolveDocPath(req.Path)
+	if err != nil {
+		httpError(w, http.StatusBadRequest, "%v", err)
+		return
+	}
+	if !docEditable(req.Path) {
+		httpError(w, http.StatusBadRequest, "read-only (engine-owned): %s", req.Path)
+		return
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if err := atomicWrite(clean, []byte(req.Content)); err != nil {
+		httpError(w, http.StatusInternalServerError, "write: %v", err)
+		return
+	}
+	now := time.Now().UTC()
+	summary := "Edited " + req.Path
+	if req.Note != "" {
+		summary += " — " + req.Note
+	}
+	_ = appendDigest(digest{ID: fmt.Sprintf("%d-docedit", now.UnixNano()), Ts: now.Format(time.RFC3339),
+		Actor: "user", Type: "doc-edit", Workspace: req.Path, Summary: summary})
+	writeJSON(w, map[string]any{"ok": true})
 }

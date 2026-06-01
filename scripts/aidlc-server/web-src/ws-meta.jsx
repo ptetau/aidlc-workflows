@@ -146,14 +146,26 @@ function DocumentsWS() {
   const [sel, setSel] = mUseState(null);
   const [body, setBody] = mUseState('');
   const [loading, setLoading] = mUseState(false);
+  const [editing, setEditing] = mUseState(false);
+  const [draft, setDraft] = mUseState('');
+  const push = useToast();
 
   mUseEffect(() => { fetch('/api/docs').then(r => r.json()).then(setDocs).catch(() => setDocs([])); }, []);
   mUseEffect(() => {
     if (!sel) return;
-    setLoading(true);
+    setEditing(false); setLoading(true);
     fetch('/api/doc?path=' + encodeURIComponent(sel)).then(r => r.text())
       .then(t => { setBody(t); setLoading(false); }).catch(() => { setBody('*(could not load)*'); setLoading(false); });
   }, [sel]);
+
+  const selDoc = (docs || []).find(d => d.path === sel);
+  const saveDoc = () => {
+    fetch('/api/doc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: sel, content: draft }) })
+      .then(r => { if (!r.ok) throw 0; setBody(draft); setEditing(false);
+        push(<><span className="tdot"></span><span>Saved <b>{sel}</b> — recorded for the next <code>/aidlc ingest</code></span></>);
+        window.dispatchEvent(new CustomEvent('aidlc-saved', { detail: { id: sel } })); })
+      .catch(() => push(<><span className="tdot" style={{ background: 'var(--danger)' }}></span><span>Save failed</span></>));
+  };
 
   const groups = {};
   (docs || []).forEach(d => { (groups[d.dir] = groups[d.dir] || []).push(d); });
@@ -163,7 +175,7 @@ function DocumentsWS() {
   return (
     <>
       <WorkHeader eyebrow="Documents" title="All artifacts"
-        desc="Every markdown artifact under aidlc-docs/ — reverse-engineering, functional & NFR design, plans, code summaries, audit, state. Read-only here; the six rich workspaces are edited under their own tabs." />
+        desc="Every markdown artifact under aidlc-docs/ — reverse-engineering, functional & NFR design, plans, code summaries, audit, state. Editable (except engine-owned state/plans/audit); the six rich workspaces have their own tabs." />
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         {/* file list */}
         <div className="scroll" style={{ width: 300, flex: '0 0 300px', borderRight: '1px solid var(--line)', background: 'var(--rail)', padding: '14px 12px' }}>
@@ -186,11 +198,28 @@ function DocumentsWS() {
             </div>
           ))}
         </div>
-        {/* rendered doc */}
-        <div className="scroll" style={{ flex: 1, minWidth: 0, padding: '24px 32px' }}>
-          {!sel && <div className="muted" style={{ padding: '60px 10px', textAlign: 'center', fontSize: 13.5 }}>Select a document to read it.</div>}
-          {sel && loading && <div className="muted">Loading…</div>}
-          {sel && !loading && <div className="doc-md" dangerouslySetInnerHTML={{ __html: rendered }} />}
+        {/* rendered / editable doc */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          {sel && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px', borderBottom: '1px solid var(--line)' }}>
+              <span className="mono" style={{ flex: 1, fontSize: 11, color: 'var(--ink-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sel}</span>
+              {!editing && selDoc && selDoc.editable && <Btn kind="soft" sm icon={I.edit} onClick={() => { setDraft(body); setEditing(true); }}>Edit</Btn>}
+              {!editing && selDoc && !selDoc.editable && <span className="pill pill-neutral" style={{ fontSize: 9.5 }}>read-only · engine-owned</span>}
+              {editing && <>
+                <Btn kind="ghost" sm onClick={() => setEditing(false)}>Cancel</Btn>
+                <Btn kind="primary" sm icon={I.check} onClick={saveDoc}>Save</Btn>
+              </>}
+            </div>
+          )}
+          <div className="scroll" style={{ flex: 1, minHeight: 0, padding: editing ? 0 : '24px 32px' }}>
+            {!sel && <div className="muted" style={{ padding: '60px 10px', textAlign: 'center', fontSize: 13.5 }}>Select a document.</div>}
+            {sel && loading && <div className="muted" style={{ padding: 24 }}>Loading…</div>}
+            {sel && !loading && !editing && <div className="doc-md" dangerouslySetInnerHTML={{ __html: rendered }} />}
+            {sel && !loading && editing && (
+              <textarea className="mono" spellCheck={false} value={draft} onChange={e => setDraft(e.target.value)}
+                style={{ width: '100%', height: '100%', minHeight: 400, border: 'none', outline: 'none', resize: 'none', padding: '20px 32px', fontSize: 12.5, lineHeight: 1.7, background: 'var(--surface)', color: 'var(--ink)' }} />
+            )}
+          </div>
         </div>
       </div>
     </>
