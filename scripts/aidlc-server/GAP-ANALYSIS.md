@@ -148,3 +148,19 @@ freeform content as structured fields; the agent + markdown remain better for th
 The server is an excellent **editing surface for a curated subset** and a clean **save→ingest loop**
 — but it is *not* a parity replacement for vanilla aidlc's documents or its gate/plan/state engine.
 Closing the gap is a product-scope choice (P0 → P2 above), not a quick fix.
+
+## 8. Resolution (implemented)
+
+Most of this gap is now closed — see `PARITY-ROADMAP.md` for the delivered increments:
+- **P0**: Overview reflects `aidlc-state.md` (phase/stage/extensions); Documents surfaces *every*
+  markdown artifact — the window is complete and honest.
+- **P1**: the six workspaces carry real fidelity (requirements FR/NFR/decisions; personas + RBAC;
+  units-of-work + story→unit map + component methods; build-and-test summary; AGENTS.md content).
+- **P2.1–P2.4**: domain-entities + business-rules workspaces; approval-gate & plan surfaces wired as
+  ledger events (the agent still drives); editable prose docs; first-class audit view.
+- **Deferred**: per-unit construction document splitting (P2.5) — units are modeled in arch; the
+  per-unit *document split* was deemed not worth the regression risk for now.
+
+The mixed-canonicality model holds throughout: JSON-canonical for the rich-edited docs; markdown
+stays canonical (server-reflected) for state/plans/audit; human decisions flow through the digest
+ledger and the agent reconciles them via `/aidlc ingest`.

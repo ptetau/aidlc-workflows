@@ -3,6 +3,22 @@
 Goal (user-chosen): close the gaps in `GAP-ANALYSIS.md` toward full parity. Built in verified
 increments (P0 → P1 → P2), checking in with the user at phase boundaries.
 
+## Status (delivered)
+
+- **P0 ✅** — Overview (parsed `aidlc-state.md`: phase/stage status, extensions, format), Documents
+  (every `aidlc-docs/**/*.md`), nav status dots.
+- **P1 ✅** — the six workspaces enriched: clarify Requirements (FR/NFR/decisions/scope); stories
+  Personas + RBAC Map + US-ids/priority/narrative/roles; arch Units-of-work + story→unit map +
+  component methods; tests Build-&-test Summary; steering AGENTS.md content.
+- **P2.1–P2.4 ✅** — new Entities + Business-rules workspaces; gate affordances + Plans reflection
+  (ledger events the agent consumes); editable prose docs (engine docs read-only); first-class Audit view.
+- **P2.5 — DEFERRED (per-unit construction dimension).** Units are already modeled in arch (units,
+  build order, component membership, story→unit map). Splitting each construction doc into separate
+  per-unit copies + a unit switcher was judged not worth the regression risk for now. Revisit if a
+  real multi-unit project needs per-unit functional-design/infra/tests as distinct documents.
+
+Everything below is the design rationale + the deferred P2.5 detail.
+
 ## The one architectural rule (read first)
 
 **The workflow engine is agent-driven. The server reflects state and records human decisions; the
