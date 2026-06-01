@@ -1,5 +1,17 @@
 # HTML Artifact Generation
 
+## Preference check — read before generating anything
+
+Before generating any HTML, check `aidlc-docs/aidlc-state.md` for:
+
+```
+## Project Configuration
+- **Documentation Format**: html
+```
+
+- If `html` (or the field is absent): generate HTML companions as described below.
+- If `markdown`: **skip HTML generation entirely** for this project.
+
 ## MANDATORY: Write an HTML companion for every .md artifact
 
 After writing **any** `.md` file under `aidlc-docs/`, immediately generate a
@@ -12,7 +24,7 @@ python <script-path>/md_to_aidlc_html.py  <path-to-artifact.md>
 Resolve `<script-path>` in this order (first that exists):
 1. `aidlc-rules/scripts/` — project-local copy distributed with the rules
 2. `.aidlc/aidlc-rules/scripts/`
-3. `{SKILL_DIR}/scripts/` — if loaded from the global skill bundle
+3. `C:/Users/User/.claude/skills/aidlc/scripts/` — skill-bundled copy (global install)
 
 ### What the HTML file is
 
@@ -41,6 +53,24 @@ When a user pastes this JSON back into their Claude Code prompt, apply each
 change by finding the matching section heading in the file and replacing its
 body text (content between that heading and the next same-or-higher-level
 heading) with the `current` value.
+
+### Presenting artifacts for review
+
+Whenever you present an artifact to the user for review (at any approval gate or
+completion message), include a clickable file URL so they can open it directly:
+
+- **Markdown:** `file:///absolute/path/to/artifact.md`
+- **HTML:** `file:///absolute/path/to/artifact.html`
+
+Example presentation line:
+```
+📄 requirements.md — file:///C:/myproject/aidlc-docs/inception/requirements/requirements.md
+🌐 requirements.html — file:///C:/myproject/aidlc-docs/inception/requirements/requirements.html
+```
+
+Provide both URLs when documentation format is `html`. Provide only the `.md` URL
+when format is `markdown`. Derive the absolute path from the workspace root recorded
+in `aidlc-docs/aidlc-state.md`.
 
 ### Scope
 

@@ -42,6 +42,30 @@ Check if `aidlc-docs/aidlc-state.md` exists:
     - **IF user explicitly requests rerun**: Next phase is Reverse Engineering regardless of staleness
 - **IF no reverse engineering artifacts**: Next phase is Reverse Engineering
 
+## Step 3.5: Ask Documentation Format Preference (new projects only)
+
+Skip this step if `aidlc-docs/aidlc-state.md` already exists (resuming a project).
+
+Ask this as the first inline quiz card of the session:
+
+```
+┌─ aidlc · setup · 01/01 ────────────────────────────────┐
+│ [?] How should aidlc generate project documentation?   │
+│     why it matters: sets the format for all artifacts  │
+└────────────────────────────────────────────────────────┘
+
+  A · markdown      .md files only — git-friendly, readable
+                    in any editor or on GitHub
+  B · html          .md + .html companion per artifact —
+                    squiz-styled browser viewer with inline
+                    editing and copy-json diff export
+  X · other         (reply: X, then describe)
+
+  // reply: A | B | X
+```
+
+Record the answer as `documentation_format: markdown` or `documentation_format: html` in `aidlc-state.md` (see Step 4). Default to `html` if the user skips.
+
 ## Step 4: Create Initial State File
 
 Create `aidlc-docs/aidlc-state.md`:
@@ -53,6 +77,9 @@ Create `aidlc-docs/aidlc-state.md`:
 - **Project Type**: [Greenfield/Brownfield]
 - **Start Date**: [ISO timestamp]
 - **Current Stage**: INCEPTION - Workspace Detection
+
+## Project Configuration
+- **Documentation Format**: [markdown/html]
 
 ## Workspace State
 - **Existing Code**: [Yes/No]
