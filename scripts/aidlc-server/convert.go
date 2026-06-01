@@ -325,6 +325,27 @@ func renderTests(b *strings.Builder, m map[string]any) {
 		}
 		b.WriteString("\n")
 	}
+	if sm := asMap(m["summary"]); len(sm) > 0 {
+		b.WriteString("\n## Build & test summary\n\n")
+		if builds := asSlice(sm["builds"]); len(builds) > 0 {
+			b.WriteString("| Component | Build | Coverage |\n|---|---|---|\n")
+			for _, bd := range builds {
+				bm := asMap(bd)
+				fmt.Fprintf(b, "| %s | %s | %s%% |\n", str(bm["component"]), str(bm["build"]), trimNum(num(bm["coverage"])))
+			}
+		}
+		if brs := asSlice(sm["businessRulesVerified"]); len(brs) > 0 {
+			b.WriteString("\n**Business rules verified:**\n")
+			for _, br := range brs {
+				fmt.Fprintf(b, "- %s\n", str(br))
+			}
+		}
+		ready := "No"
+		if asBool(sm["readyForOperations"]) {
+			ready = "Yes"
+		}
+		fmt.Fprintf(b, "\n**Ready for Operations:** %s\n", ready)
+	}
 }
 
 func renderSteering(b *strings.Builder, m map[string]any) {

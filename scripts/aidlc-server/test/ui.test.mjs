@@ -224,6 +224,31 @@ test('stories Personas + Map tabs: edit persona, toggle RBAC, persist', async (t
   assert.deepEqual(page.__errors, []);
 });
 
+test('tests Summary tab: build status + coverage + ready-for-ops persists', async (t) => {
+  const app = await openApp({
+    project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },
+    tests: {
+      types: ['Unit'], components: [{ id: 'a', name: 'A' }], cells: { 'a-0': { status: 'pass', code: 'x' } },
+      summary: { builds: [{ component: 'A', build: 'success', coverage: 80 }], businessRulesVerified: ['BR-1'], readyForOperations: false },
+    },
+  });
+  t.after(app.cleanup);
+  const { page, ws } = app;
+  await page.locator('nav button', { hasText: 'Tests' }).first().click();
+  await page.waitForTimeout(200);
+  await page.getByRole('button', { name: 'Summary' }).first().click();
+  await page.waitForTimeout(300);
+  assert.ok(await page.getByText('Build status').first().isVisible(), 'summary shown');
+  assert.ok(await page.getByText('Ready for Operations').first().isVisible(), 'ready toggle shown');
+  // flip ready-for-ops and save
+  await page.locator('.switch').last().click();
+  await page.getByRole('button', { name: /^Save$/ }).first().click();
+  await page.waitForSelector('.toast', { timeout: 4000 });
+  const td = readWorkspaceDoc(ws, 'tests');
+  assert.equal(td.summary.readyForOperations, true, 'ready-for-ops persisted');
+  assert.deepEqual(page.__errors, []);
+});
+
 test('arch Units tab: edit a unit + story map, persist; methods on a node', async (t) => {
   const app = await openApp({
     project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },

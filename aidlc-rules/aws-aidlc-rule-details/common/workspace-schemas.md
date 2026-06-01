@@ -122,10 +122,18 @@ security validator over these (e.g. public+unencrypted db = HIGH). `notes` maps 
   "cells": {
     "agg-0": { "status": "pass", "code": "it('sums usage', () => { … })" },
     "agg-1": { "status": "none", "code": "" }
+  },
+  "summary": {
+    "builds": [ { "component": "Aggregator", "build": "success", "coverage": 92 } ],
+    "businessRulesVerified": ["BR-001: money in integer cents"],
+    "readyForOperations": false
   }
 }
 ```
-`cells` keys are `"<componentId>-<typeIndex>"`. `status` ∈ `pass | fail | running | none`.
+`cells` keys are `"<componentId>-<typeIndex>"`. `status` ∈ `pass | fail | none` (the agent sets it
+from the real build-and-test run; the UI does not execute tests). `summary` is the build-and-test
+summary: per-component `builds` (`build` ∈ success/fail/pending, `coverage` %), the `businessRulesVerified`
+list, and the `readyForOperations` gate.
 
 ## steering.json
 ```json

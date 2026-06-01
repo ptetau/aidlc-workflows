@@ -690,6 +690,35 @@
         "status": "pass",
         "code": "test('updates payment method', async ({ page }) => {\n  await page.fill('#card', '4242...')\n  await expect(page.locator('.saved')).toBeVisible()\n})"
       }
+    },
+    "summary": {
+      "builds": [
+        {
+          "component": "Aggregator",
+          "build": "success",
+          "coverage": 92
+        },
+        {
+          "component": "Invoice Service",
+          "build": "fail",
+          "coverage": 78
+        },
+        {
+          "component": "Payment Retry",
+          "build": "success",
+          "coverage": 85
+        },
+        {
+          "component": "Customer Portal",
+          "build": "success",
+          "coverage": 70
+        }
+      ],
+      "businessRulesVerified": [
+        "BR-001: All money math in integer cents",
+        "BR-002: External calls are idempotent"
+      ],
+      "readyForOperations": false
     }
   },
   "steering": {
