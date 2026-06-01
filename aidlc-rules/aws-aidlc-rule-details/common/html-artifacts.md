@@ -30,8 +30,9 @@ Resolve `<script-path>` in this order (first that exists):
 
 A squiz-styled, self-contained single-page document with:
 - **IBM Plex Mono/Sans** typography, dark phosphor terminal theme
-- **Inline editing** — every section of the document is a live textarea; click to edit raw markdown
-- **Copy JSON** button — exports *only changed sections* as a diff payload
+- **Rendered content** — each section displays as proper HTML (headings, lists, bold, code blocks) via marked.js
+- **Click-to-edit** — double-click a section or press ✎ edit to drop to a raw-markdown textarea; ✓ done re-renders
+- **Copy JSON** button — exports *only changed sections* as a diff payload (markdown strings, not HTML)
 
 ### The diff JSON format (copy json output)
 

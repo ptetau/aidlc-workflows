@@ -254,23 +254,67 @@ h4.section-heading,h5.section-heading,h6.section-heading{
 }
 .preamble-label::before{content:"// ";color:var(--accent)}
 
-/* ── SECTION BODY (textarea) ────────────────────────────────────────────── */
-.section-body{
-  display:block;margin-left:70px;width:calc(100% - 70px);
-  background:var(--surface);border:1px solid var(--rule);
-  padding:8px 12px;overflow:hidden;resize:none;
-  font-family:"IBM Plex Mono",monospace;font-size:var(--fs-mono);
-  line-height:1.65;color:var(--ink);outline:none;
-  min-height:28px;transition:border-color .12s,background .12s;
+/* ── SECTION BODY (rich view/edit) ─────────────────────────────────────── */
+.section-body { margin-left:70px; width:calc(100% - 70px); position:relative; }
+@media(max-width:640px){ .section-body{ margin-left:0; width:100%; } }
+.section-rendered {
+  background:var(--surface); border:1px solid var(--rule);
+  padding:12px 16px; font-family:"IBM Plex Sans",sans-serif;
+  font-size:var(--fs-base); line-height:1.7; color:var(--ink);
+  min-height:28px; cursor:text; transition:border-color .12s;
 }
-.section-body:focus{border-color:var(--accent)}
-.section-body.modified{border-color:var(--accent);background:var(--selected)}
-/* empty sections: dashed border, dimmed, single-line until focused */
-.section-body[data-empty="true"]{
-  border-style:dashed;opacity:.5;min-height:28px;
+.section-rendered:hover { border-color:var(--ink-2); }
+.section-rendered p { margin:0 0 10px; }
+.section-rendered p:last-child { margin-bottom:0; }
+.section-rendered ul,.section-rendered ol { margin:0 0 10px; padding-left:22px; }
+.section-rendered li { margin:2px 0; }
+.section-rendered code {
+  font-family:"IBM Plex Mono",monospace;
+  background:var(--bg-2); padding:1px 5px; font-size:.88em;
 }
-.section-body[data-empty="true"]:focus{opacity:1;border-style:solid}
-.section-body::placeholder{color:var(--ink-3);font-style:italic}
+.section-rendered pre {
+  background:var(--bg-2); border:1px solid var(--rule-2);
+  padding:10px 14px; overflow-x:auto; margin:0 0 10px;
+}
+.section-rendered pre code { background:none; padding:0; font-size:var(--fs-mono); }
+.section-rendered blockquote {
+  border-left:2px solid var(--accent); margin:0 0 10px;
+  padding:4px 0 4px 14px; color:var(--ink-2);
+}
+.section-rendered table { border-collapse:collapse; width:100%; margin:0 0 10px; }
+.section-rendered th,.section-rendered td {
+  border:1px solid var(--rule); padding:6px 10px; text-align:left;
+}
+.section-rendered th { background:var(--bg-2); font-weight:600; }
+.section-rendered hr { border:none; border-top:1px solid var(--rule); margin:10px 0; }
+.section-rendered strong { font-weight:600; }
+.section-rendered h1,.section-rendered h2,.section-rendered h3,
+.section-rendered h4,.section-rendered h5,.section-rendered h6 {
+  font-family:"IBM Plex Sans",sans-serif; font-weight:600;
+  margin:12px 0 6px; color:var(--ink);
+}
+.section-rendered.is-empty::after {
+  content:"(empty \2014 click to add)"; color:var(--ink-3);
+  font-style:italic; font-family:"IBM Plex Mono",monospace; font-size:11px;
+}
+.section-body.modified .section-rendered { border-color:var(--accent); background:var(--selected); }
+.section-edit {
+  display:block; width:100%; background:var(--surface);
+  border:1px solid var(--accent); padding:10px 14px;
+  overflow:hidden; resize:none;
+  font-family:"IBM Plex Mono",monospace; font-size:var(--fs-mono);
+  line-height:1.65; color:var(--ink); outline:none; min-height:44px;
+}
+.edit-btn,.save-btn {
+  position:absolute; top:6px; right:6px;
+  background:var(--bg-2); border:1px solid var(--rule-2);
+  color:var(--ink-2); font-family:"IBM Plex Mono",monospace;
+  font-size:9px; letter-spacing:.06em; text-transform:uppercase;
+  padding:2px 7px; cursor:pointer; opacity:0; transition:opacity .15s;
+}
+.section-body:hover .edit-btn { opacity:1; }
+.save-btn { background:var(--accent); color:var(--bg); border-color:var(--accent); opacity:1; }
+.edit-btn:hover { color:var(--accent); border-color:var(--accent); }
 
 /* ── STATUS BAR ─────────────────────────────────────────────────────────── */
 .statusbar{
@@ -405,33 +449,78 @@ JS = r"""
   var SECTIONS = __SECTIONS_JSON__;
   var state    = {};
 
-  // auto-size all textareas; run twice — once now, once after fonts load
-  function resizeAll() {
-    document.querySelectorAll('.section-body').forEach(function(ta) {
-      ta.style.height = 'auto';
-      ta.style.height = (ta.scrollHeight || ta.offsetHeight) + 'px';
-    });
-  }
-  resizeAll();
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(resizeAll);
+  // --- render helpers ---
+  function renderSection(container) {
+    var id = container.dataset.id;
+    var orig = container.dataset.original || '';
+    var md = (id in state) ? state[id] : orig;
+    var rendered = container.querySelector('.section-rendered');
+    if (!md.trim()) {
+      rendered.innerHTML = '';
+      rendered.classList.add('is-empty');
+    } else {
+      rendered.innerHTML = marked.parse(md);
+      rendered.classList.remove('is-empty');
+    }
   }
 
-  // track edits
-  document.querySelectorAll('.section-body').forEach(function(ta) {
+  // render all on load + after fonts
+  document.querySelectorAll('.section-body').forEach(renderSection);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function() {
+      document.querySelectorAll('.section-body').forEach(renderSection);
+    });
+  }
+
+  // --- edit / save toggle ---
+  function startEdit(container) {
+    var id = container.dataset.id;
+    var orig = container.dataset.original || '';
+    var md = (id in state) ? state[id] : orig;
+    var rendered = container.querySelector('.section-rendered');
+    var ta = container.querySelector('.section-edit');
+    var editBtn = container.querySelector('.edit-btn');
+    var saveBtn = container.querySelector('.save-btn');
+    ta.value = md;
+    ta.style.height = 'auto';
+    ta.style.height = (ta.scrollHeight || 80) + 'px';
+    rendered.style.display = 'none';
+    ta.style.display = 'block';
+    editBtn.style.display = 'none';
+    saveBtn.style.display = '';
+    ta.focus();
+  }
+
+  function saveEdit(container) {
+    var id = container.dataset.id;
+    var orig = container.dataset.original || '';
+    var ta = container.querySelector('.section-edit');
+    var rendered = container.querySelector('.section-rendered');
+    var editBtn = container.querySelector('.edit-btn');
+    var saveBtn = container.querySelector('.save-btn');
+    var val = ta.value;
+    if (val !== orig) { state[id] = val; container.classList.add('modified'); }
+    else { delete state[id]; container.classList.remove('modified'); }
+    renderSection(container);
+    ta.style.display = 'none';
+    rendered.style.display = '';
+    editBtn.style.display = '';
+    saveBtn.style.display = 'none';
+    updateBar();
+  }
+
+  document.querySelectorAll('.section-body').forEach(function(container) {
+    var editBtn = container.querySelector('.edit-btn');
+    var saveBtn = container.querySelector('.save-btn');
+    var rendered = container.querySelector('.section-rendered');
+    var ta = container.querySelector('.section-edit');
+    editBtn.addEventListener('click', function(e) { e.stopPropagation(); startEdit(container); });
+    rendered.addEventListener('dblclick', function() { startEdit(container); });
+    saveBtn.addEventListener('click', function(e) { e.stopPropagation(); saveEdit(container); });
+    ta.addEventListener('blur', function() { saveEdit(container); });
     ta.addEventListener('input', function() {
       ta.style.height = 'auto';
       ta.style.height = ta.scrollHeight + 'px';
-      var id   = ta.dataset.id;
-      var orig = ta.dataset.original;  // browser decodes &#10; back to \n
-      if (ta.value !== orig) {
-        state[id] = ta.value;
-        ta.classList.add('modified');
-      } else {
-        delete state[id];
-        ta.classList.remove('modified');
-      }
-      updateBar();
     });
   });
 
@@ -632,7 +721,11 @@ __SECTIONS_HTML__
   </div>
 </div>
 
-<script>__JS__</script>
+<script>__MARKED__</script>
+<script>
+marked.use({ breaks: false, gfm: true });
+__JS__
+</script>
 </body>
 </html>
 """
@@ -642,10 +735,6 @@ __SECTIONS_HTML__
 
 def render_section(i, total, s):
     body_esc = attr_esc(s["body"])
-    empty = s["body"].strip() == ""
-    # 1 row for empty/short sections; let JS auto-resize expand everything else
-    rows = 1 if empty else max(2, s["body"].count("\n") + 1)
-    placeholder = " data-empty=\"true\" placeholder=\"(empty — click to add content)\"" if empty else ""
 
     if s["heading"]:
         htag = f"h{min(s['level'], 6)}"
@@ -662,9 +751,12 @@ def render_section(i, total, s):
         f'<div class="section-num-suffix">of&nbsp;{tot}</div></div>\n'
         f'      <div>{head_html}</div>\n'
         f'    </header>\n'
-        f'    <textarea class="section-body"'
-        f' data-id="{s["id"]}" data-original="{body_esc}"'
-        f' rows="{rows}"{placeholder}>{body_esc}</textarea>\n'
+        f'    <div class="section-body" data-id="{s["id"]}" data-original="{body_esc}">\n'
+        f'      <div class="section-rendered"></div>\n'
+        f'      <textarea class="section-edit" style="display:none" rows="3">{body_esc}</textarea>\n'
+        f'      <button type="button" class="edit-btn" aria-label="Edit section">&#10002; edit</button>\n'
+        f'      <button type="button" class="save-btn" style="display:none" aria-label="Save">&#10003; done</button>\n'
+        f'    </div>\n'
         f'  </article>\n'
     )
 
@@ -684,6 +776,8 @@ def render(md_path, sections, theme="phosphor"):
         for s in sections
     ]
 
+    marked_js = (Path(__file__).parent / 'marked.min.js').read_text(encoding='utf-8')
+
     js_out = (
         JS
         .replace("__FILE_JSON__", json.dumps(file_str))
@@ -702,6 +796,7 @@ def render(md_path, sections, theme="phosphor"):
         .replace("__TOTAL_PAD__", str(total).zfill(2))
         .replace("__PLURAL__", "" if total == 1 else "s")
         .replace("__SECTIONS_HTML__", sections_html)
+        .replace("__MARKED__", marked_js)
         .replace("__JS__", js_out)
     )
 
