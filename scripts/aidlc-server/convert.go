@@ -179,6 +179,18 @@ func renderStories(b *strings.Builder, m map[string]any) {
 	if intent := str(m["intent"]); intent != "" {
 		fmt.Fprintf(b, "> %s\n\n", intent)
 	}
+	if ps := asSlice(m["personas"]); len(ps) > 0 {
+		b.WriteString("## Personas\n\n")
+		for _, p := range ps {
+			pm := asMap(p)
+			fmt.Fprintf(b, "- **%s** (%s)", str(pm["name"]), str(pm["role"]))
+			if g := str(pm["goals"]); g != "" {
+				fmt.Fprintf(b, " — goals: %s", g)
+			}
+			b.WriteString("\n")
+		}
+		b.WriteString("\n")
+	}
 	// group stories under their epic; agents execute most, humans mark the few + specify criteria
 	for _, e := range asSlice(m["epics"]) {
 		em := asMap(e)
@@ -198,7 +210,24 @@ func renderStories(b *strings.Builder, m map[string]any) {
 			if asBool(cm["done"]) {
 				tags = append(tags, "done")
 			}
-			fmt.Fprintf(b, "- **%s** _(%s)_\n", str(cm["title"]), strings.Join(tags, ", "))
+			if pr := str(cm["priority"]); pr != "" {
+				tags = append(tags, pr)
+			}
+			code := str(cm["code"])
+			if code != "" {
+				code = code + " · "
+			}
+			fmt.Fprintf(b, "- **%s%s** _(%s)_\n", code, str(cm["title"]), strings.Join(tags, ", "))
+			if as := str(cm["asA"]); as != "" {
+				fmt.Fprintf(b, "  - _As a %s, I want %s, so that %s_\n", as, str(cm["iWant"]), str(cm["soThat"]))
+			}
+			if roles := asSlice(cm["roles"]); len(roles) > 0 {
+				rs := make([]string, len(roles))
+				for i, r := range roles {
+					rs[i] = str(r)
+				}
+				fmt.Fprintf(b, "  - roles: %s\n", strings.Join(rs, ", "))
+			}
 			for _, cr := range asSlice(cm["criteria"]) {
 				oneLine := strings.ReplaceAll(str(cr), "\n", " / ")
 				fmt.Fprintf(b, "  - %s\n", oneLine)

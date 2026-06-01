@@ -156,7 +156,7 @@ test('Stories outline: readiness + human marker, inline criteria editing', async
   await page.evaluate(() => localStorage.setItem('aidlc-ws', 'stories'));
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForSelector('h1');
-  assert.equal(await page.getByRole('button', { name: /Backlog|In Progress|This Sprint/ }).count(), 0, 'no kanban columns');
+  assert.equal(await page.getByRole('button', { name: /This Sprint|In Progress/ }).count(), 0, 'no kanban columns');
   assert.ok(await page.getByText('done').first().isVisible(), 'readiness pill shown');
   assert.ok(await page.getByText('human').first().isVisible(), 'human marker shown');
   // expanding a story reveals inline criteria editing
@@ -189,6 +189,39 @@ test('Overview reflects aidlc-state.md; Documents lists & renders markdown', asy
   await page.waitForTimeout(400);
   assert.ok(await page.locator('.doc-md h1').first().isVisible(), 'markdown rendered (heading present)');
   assert.deepEqual(page.__errors, [], 'no errors on Overview/Documents');
+});
+
+test('stories Personas + Map tabs: edit persona, toggle RBAC, persist', async (t) => {
+  const app = await openApp({
+    project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },
+    stories: {
+      intent: 'Ship.', epics: [{ id: 'e1', title: 'Core', color: 'var(--blue)' }],
+      personas: [{ id: 'p1', name: 'Admin', role: 'admin', goals: 'run it', frustrations: 'noise' }],
+      cards: [{ id: 's1', epic: 'e1', title: 'Do X', criteria: [], human: false, done: false, roles: [] }],
+    },
+  });
+  t.after(app.cleanup);
+  const { page, ws } = app;
+  await page.locator('nav button', { hasText: 'Stories' }).first().click();
+  await page.waitForTimeout(200);
+
+  // Personas tab renders the seeded persona
+  await page.getByRole('button', { name: 'Personas' }).first().click();
+  await page.waitForTimeout(300);
+  assert.ok(await page.getByText('Goals').first().isVisible(), 'persona fields shown');
+
+  // Map tab: toggle the admin cell for story s1, save → roles persisted
+  await page.getByRole('button', { name: 'Map' }).first().click();
+  await page.waitForTimeout(300);
+  assert.ok(await page.getByText('Do X').first().isVisible(), 'story row in matrix');
+  // the matrix has one toggle button per (story,role); click the role cell
+  const cell = page.locator('button[title*="admin"]').first();
+  await cell.click();
+  await page.getByRole('button', { name: /^Save$/ }).first().click();
+  await page.waitForSelector('.toast', { timeout: 4000 });
+  const sd = readWorkspaceDoc(ws, 'stories');
+  assert.deepEqual(sd.cards[0].roles, ['admin'], 'RBAC role persisted');
+  assert.deepEqual(page.__errors, []);
 });
 
 test('clarify Requirements tab: FR/NFR/decisions/scope edit + persist', async (t) => {

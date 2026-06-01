@@ -60,8 +60,13 @@ tab) — populate these from `requirements.md`:
 {
   "intent": "One-sentence business intent.",
   "epics": [ { "id": "e1", "title": "Usage aggregation", "color": "var(--blue)" } ],
+  "personas": [
+    { "id": "p1", "name": "Priya · Finance", "role": "finance", "goals": "Reconcile every cent", "frustrations": "Manual CSV exports" }
+  ],
   "cards": [
-    { "id": "s1", "epic": "e1", "title": "Ingest events idempotently",
+    { "id": "s1", "epic": "e1", "code": "US-AGG-001", "title": "Ingest events idempotently",
+      "asA": "operator", "iWant": "duplicate events ignored", "soThat": "totals stay correct",
+      "priority": "Must", "roles": ["admin"],
       "criteria": ["Given a duplicate event id\nWhen received\nThen it is ignored"],
       "human": false, "done": false, "points": 5 }
   ]
@@ -69,10 +74,11 @@ tab) — populate these from `requirements.md`:
 ```
 Agents execute most stories; humans specify them. `criteria` are Gherkin strings (the UI validates
 Given/When/Then). **Readiness is derived, not stored**: `done:true` → done; else all criteria valid
-→ ready (for an agent); else needs detail. `human: true` marks the few stories needing a person
-(decision, credential, manual check). `points` is an optional size hint. `epic` references an
-`epics[].id`. Epic `color` uses a CSS var: `--blue --primary --violet --green --amber --teal`.
-There is **no** sprint board / column model.
+→ ready (for an agent); else needs detail. `human: true` marks the few stories needing a person.
+`code` is the canonical story id (e.g. `US-AGG-001`); `priority` ∈ Must/Should/Could/Won't;
+`asA/iWant/soThat` are the narrative; `roles` are the persona `role`s the story serves (the RBAC
+map / "Map" tab). `personas` carry `name/role/goals/frustrations`. `points` optional. `epic`
+references `epics[].id`. There is **no** sprint board / column model.
 
 ## arch.json
 ```json

@@ -231,7 +231,12 @@
         ],
         "human": false,
         "done": true,
-        "points": 5
+        "points": 5,
+        "code": "US-AGG-001",
+        "priority": "Must",
+        "roles": [
+          "admin"
+        ]
       },
       {
         "id": "s2",
@@ -242,7 +247,12 @@
         ],
         "human": false,
         "done": false,
-        "points": 8
+        "points": 8,
+        "code": "US-AGG-002",
+        "priority": "Should",
+        "roles": [
+          "admin"
+        ]
       },
       {
         "id": "s3",
@@ -253,7 +263,12 @@
         ],
         "human": false,
         "done": false,
-        "points": 5
+        "points": 5,
+        "code": "US-INV-001",
+        "priority": "Should",
+        "roles": [
+          "admin"
+        ]
       },
       {
         "id": "s4",
@@ -264,7 +279,12 @@
         ],
         "human": true,
         "done": false,
-        "points": 3
+        "points": 3,
+        "code": "US-INV-002",
+        "priority": "Should",
+        "roles": [
+          "admin"
+        ]
       },
       {
         "id": "s5",
@@ -275,7 +295,15 @@
         ],
         "human": false,
         "done": false,
-        "points": 3
+        "points": 3,
+        "code": "US-PAY-001",
+        "priority": "Must",
+        "roles": [
+          "customer"
+        ],
+        "asA": "customer",
+        "iWant": "to update my payment method myself",
+        "soThat": "I never miss a charge waiting on support"
       },
       {
         "id": "s6",
@@ -286,7 +314,12 @@
         ],
         "human": false,
         "done": false,
-        "points": 5
+        "points": 5,
+        "code": "US-FIN-001",
+        "priority": "Should",
+        "roles": [
+          "finance"
+        ]
       },
       {
         "id": "s7",
@@ -295,7 +328,35 @@
         "criteria": [],
         "human": true,
         "done": false,
-        "points": 2
+        "points": 2,
+        "code": "US-FIN-002",
+        "priority": "Should",
+        "roles": [
+          "finance"
+        ]
+      }
+    ],
+    "personas": [
+      {
+        "id": "p1",
+        "name": "Priya · Finance",
+        "role": "finance",
+        "goals": "Reconcile every cent against the ledger",
+        "frustrations": "Manual CSV exports and mismatched totals"
+      },
+      {
+        "id": "p2",
+        "name": "Customer",
+        "role": "customer",
+        "goals": "Understand charges and update a card without support",
+        "frustrations": "Surprise bills, failed silent charges"
+      },
+      {
+        "id": "p3",
+        "name": "Ops Admin",
+        "role": "admin",
+        "goals": "Keep billing running, catch failures early",
+        "frustrations": "Noisy retry alerts"
       }
     ]
   },
