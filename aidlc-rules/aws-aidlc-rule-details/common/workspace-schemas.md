@@ -44,6 +44,17 @@ Generation: keep `requirement` segments concatenating to the exact requirement t
 id must have a matching question `id`. `kind` drives the input; set `answer` to the resolved value
 (or null/empty if unresolved). `suggest` is optional (a recommended value from elsewhere).
 
+clarify also carries the **structured requirements** that result from clarification (the Requirements
+tab) — populate these from `requirements.md`:
+```json
+{
+  "functional": [ { "id": "FR-001", "text": "The system must …" } ],
+  "nfrs":       [ { "category": "Performance", "requirement": "p99 latency", "target": "< 200ms" } ],
+  "decisions":  [ { "decision": "Money representation", "choice": "integer cents", "rationale": "…" } ],
+  "scope":      { "in": ["…"], "out": ["…"] }
+}
+```
+
 ## stories.json
 ```json
 {

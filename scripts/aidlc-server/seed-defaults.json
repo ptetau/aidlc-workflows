@@ -140,7 +140,67 @@
         "kind": "PRIYA · 2h",
         "text": "Default currency is USD until the multi-currency epic lands in Q3."
       }
-    ]
+    ],
+    "functional": [
+      {
+        "id": "FR-001",
+        "text": "Charge customers for usage at the end of each billing cycle"
+      },
+      {
+        "id": "FR-002",
+        "text": "Customers can view invoices and update payment methods at any time"
+      },
+      {
+        "id": "FR-003",
+        "text": "Retry failed payments on a schedule and notify the customer"
+      },
+      {
+        "id": "FR-004",
+        "text": "Aggregate usage events accurately before invoicing"
+      }
+    ],
+    "nfrs": [
+      {
+        "category": "Performance",
+        "requirement": "Invoice generation per cycle",
+        "target": "< 5s"
+      },
+      {
+        "category": "Reliability",
+        "requirement": "Payment retry attempts",
+        "target": "3 over 7 days"
+      },
+      {
+        "category": "Accuracy",
+        "requirement": "Usage aggregation drift",
+        "target": "< 0.01%"
+      }
+    ],
+    "decisions": [
+      {
+        "decision": "Money representation",
+        "choice": "Integer cents",
+        "rationale": "No floats anywhere — avoids rounding errors"
+      },
+      {
+        "decision": "Currency support",
+        "choice": "USD only at launch",
+        "rationale": "Multi-currency is a later epic (#1842)"
+      }
+    ],
+    "scope": {
+      "in": [
+        "Usage-based billing",
+        "Invoice viewing",
+        "Self-serve payment update",
+        "Payment retry + dunning"
+      ],
+      "out": [
+        "Multi-currency",
+        "Tax calculation",
+        "Manual adjustments UI"
+      ]
+    }
   },
   "stories": {
     "intent": "Customers are billed accurately for what they use, can manage payment without support, and finance can reconcile every cent.",

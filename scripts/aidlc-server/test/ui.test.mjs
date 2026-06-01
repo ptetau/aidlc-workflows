@@ -191,6 +191,34 @@ test('Overview reflects aidlc-state.md; Documents lists & renders markdown', asy
   assert.deepEqual(page.__errors, [], 'no errors on Overview/Documents');
 });
 
+test('clarify Requirements tab: FR/NFR/decisions/scope edit + persist', async (t) => {
+  const app = await openApp({
+    project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },
+    clarify: {
+      requirement: [{ t: 'Build it.' }], questions: [], notes: [],
+      functional: [{ id: 'FR-001', text: 'Do the thing' }],
+      nfrs: [{ category: 'Performance', requirement: 'latency', target: '<100ms' }],
+      decisions: [{ decision: 'DB', choice: 'Postgres', rationale: 'relational' }],
+      scope: { in: ['core'], out: ['nice-to-have'] },
+    },
+  });
+  t.after(app.cleanup);
+  const { page, ws } = app;
+  // default view is Clarify; switch to Requirements
+  await page.getByRole('button', { name: 'Requirements' }).first().click();
+  await page.waitForTimeout(300);
+  assert.ok(await page.getByText('Functional requirements').first().isVisible(), 'FR section shown');
+  assert.ok(await page.getByText('In scope').first().isVisible(), 'scope shown');
+  // edit the FR text (targeted by its placeholder) and Save → persists to clarify.json
+  const fr = page.getByPlaceholder('The system must…').first();
+  await fr.fill('Do the thing well');
+  await page.getByRole('button', { name: /^Save$/ }).first().click();
+  await page.waitForSelector('.toast', { timeout: 4000 });
+  const cl = readWorkspaceDoc(ws, 'clarify');
+  assert.equal(cl.functional[0].text, 'Do the thing well', 'requirements persisted');
+  assert.deepEqual(page.__errors, []);
+});
+
 test('boots from a real (non-demo) seeded project', async (t) => {
   const app = await openApp({
     project: { name: 'AcmeWidgets', repo: 'acme/widgets', branch: 'main', version: 'v9' },

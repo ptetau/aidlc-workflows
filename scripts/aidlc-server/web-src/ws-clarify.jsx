@@ -24,6 +24,12 @@ function ClarifyWS() {
   const [focusQ, setFocusQ] = cUseState(null);
   const [hoverQ, setHoverQ] = cUseState(null);
   const cardRefs = cUseRef({});
+  // P1: the structured requirements document (FR / NFR / decisions / scope)
+  const [tab, setTab] = cUseState('clarify');
+  const [functional, setFunctional] = cUseState(() => seed.functional || []);
+  const [nfrs, setNfrs] = cUseState(() => seed.nfrs || []);
+  const [decisions, setDecisions] = cUseState(() => seed.decisions || []);
+  const [scope, setScope] = cUseState(() => seed.scope || { in: [], out: [] });
 
   const answeredCount = seed.questions.filter(q => isAnswered(q, answers[q.id])).length;
 
@@ -41,22 +47,31 @@ function ClarifyWS() {
     requirement: seed.requirement,
     questions: seed.questions.map(q => ({ ...q, answer: answers[q.id] })),
     notes,
+    functional, nfrs, decisions, scope,
   });
 
   return (
     <>
       <WorkHeader
         eyebrow="Clarification Workspace"
-        title="Resolve the ambiguities"
-        desc="The AI flagged unclear language in the requirement. Answer each question to lock down scope before stories are generated."
+        title={tab === 'clarify' ? 'Resolve the ambiguities' : 'Requirements'}
+        desc={tab === 'clarify'
+          ? 'The AI flagged unclear language in the requirement. Answer each question to lock down scope before stories are generated.'
+          : 'The structured requirements that result from clarification — functional, non-functional, decisions and scope.'}
         right={<>
-          <span className="pill pill-clay">{answeredCount} / {seed.questions.length} answered</span>
-          <Btn kind="ghost" sm icon={I.reset} onClick={() => setAnswers(Object.fromEntries(seed.questions.map(q => [q.id, q.kind === 'multi' ? [] : null])))}>Reset</Btn>
+          <Segmented options={[{ value: 'clarify', label: 'Clarify' }, { value: 'requirements', label: 'Requirements' }]} value={tab} onChange={setTab} />
+          {tab === 'clarify' && <span className="pill pill-clay">{answeredCount} / {seed.questions.length} answered</span>}
           <Btn kind="primary" icon={I.check} onClick={() => save('clarify', buildState())}>Save</Btn>
         </>}
       />
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', overflowX: 'auto' }}>
+      {tab === 'requirements' && (
+        <ClarifyRequirements functional={functional} setFunctional={setFunctional}
+          nfrs={nfrs} setNfrs={setNfrs} decisions={decisions} setDecisions={setDecisions}
+          scope={scope} setScope={setScope} />
+      )}
+
+      <div style={{ flex: 1, minHeight: 0, display: tab === 'clarify' ? 'flex' : 'none', overflowX: 'auto' }}>
         {/* requirement pane */}
         <div style={{ width: 330, flex: '0 1 330px', minWidth: 264, borderRight: '1px solid var(--line)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '16px 22px 10px', display: 'flex', alignItems: 'baseline', gap: 10 }}>
@@ -227,6 +242,103 @@ function OptRow({ sel, radio, onClick, children }) {
       <span style={{ flex: 1 }}>{children}</span>
     </button>
   );
+}
+
+/* ---- Requirements tab: editable FR / NFR / decisions / scope ---- */
+function ClarifyRequirements({ functional, setFunctional, nfrs, setNfrs, decisions, setDecisions, scope, setScope }) {
+  const upd = (arr, set, i, patch) => set(arr.map((x, j) => j === i ? { ...x, ...patch } : x));
+  const del = (arr, set, i) => set(arr.filter((_, j) => j !== i));
+  const fieldStyle = { fontSize: 12.5, padding: '7px 9px' };
+
+  return (
+    <div className="scroll fadein" style={{ flex: 1, minHeight: 0, padding: '18px 28px 28px', display: 'flex', flexDirection: 'column', gap: 22, maxWidth: 900 }}>
+      {/* Functional requirements */}
+      <Section title="Functional requirements" onAdd={() => setFunctional([...functional, { id: 'FR-' + String(functional.length + 1).padStart(3, '0'), text: '' }])}>
+        {functional.length === 0 && <Empty>No functional requirements yet.</Empty>}
+        {functional.map((f, i) => (
+          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <input className="input mono" value={f.id} onChange={e => upd(functional, setFunctional, i, { id: e.target.value })} style={{ ...fieldStyle, flex: '0 0 110px' }} />
+            <textarea className="textarea" rows={1} value={f.text} placeholder="The system must…" onChange={e => upd(functional, setFunctional, i, { text: e.target.value })} style={{ ...fieldStyle, flex: 1 }} />
+            <DelBtn onClick={() => del(functional, setFunctional, i)} />
+          </div>
+        ))}
+      </Section>
+
+      {/* Non-functional */}
+      <Section title="Non-functional requirements" onAdd={() => setNfrs([...nfrs, { category: '', requirement: '', target: '' }])}>
+        {nfrs.length === 0 && <Empty>No NFRs yet.</Empty>}
+        {nfrs.length > 0 && (
+          <div className="eyebrow" style={{ display: 'flex', gap: 8, padding: '0 2px' }}>
+            <span style={{ flex: '0 0 130px' }}>category</span><span style={{ flex: 1 }}>requirement</span><span style={{ flex: '0 0 150px' }}>target</span><span style={{ width: 24 }}></span>
+          </div>
+        )}
+        {nfrs.map((n, i) => (
+          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <input className="input" value={n.category} placeholder="Performance" onChange={e => upd(nfrs, setNfrs, i, { category: e.target.value })} style={{ ...fieldStyle, flex: '0 0 130px' }} />
+            <input className="input" value={n.requirement} placeholder="p99 latency" onChange={e => upd(nfrs, setNfrs, i, { requirement: e.target.value })} style={{ ...fieldStyle, flex: 1 }} />
+            <input className="input mono" value={n.target} placeholder="< 200ms" onChange={e => upd(nfrs, setNfrs, i, { target: e.target.value })} style={{ ...fieldStyle, flex: '0 0 150px' }} />
+            <DelBtn onClick={() => del(nfrs, setNfrs, i)} />
+          </div>
+        ))}
+      </Section>
+
+      {/* Architectural decisions */}
+      <Section title="Architectural decisions" onAdd={() => setDecisions([...decisions, { decision: '', choice: '', rationale: '' }])}>
+        {decisions.length === 0 && <Empty>No decisions recorded.</Empty>}
+        {decisions.map((d, i) => (
+          <div key={i} className="card" style={{ padding: 11, boxShadow: 'none', display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input className="input" value={d.decision} placeholder="Decision" onChange={e => upd(decisions, setDecisions, i, { decision: e.target.value })} style={{ ...fieldStyle, flex: 1, fontWeight: 600 }} />
+              <input className="input" value={d.choice} placeholder="Choice" onChange={e => upd(decisions, setDecisions, i, { choice: e.target.value })} style={{ ...fieldStyle, flex: 1 }} />
+              <DelBtn onClick={() => del(decisions, setDecisions, i)} />
+            </div>
+            <textarea className="textarea" rows={1} value={d.rationale} placeholder="Rationale…" onChange={e => upd(decisions, setDecisions, i, { rationale: e.target.value })} style={fieldStyle} />
+          </div>
+        ))}
+      </Section>
+
+      {/* Scope */}
+      <div>
+        <div className="eyebrow" style={{ marginBottom: 10 }}>MVP scope</div>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          {[['in', 'In scope', 'green'], ['out', 'Out of scope', 'neutral']].map(([key, label, pill]) => (
+            <div key={key} className="card" style={{ flex: '1 1 320px', padding: 13 }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 9 }}>
+                <span className={`pill pill-${pill}`} style={{ fontSize: 9.5 }}>{label}</span>
+                <button onClick={() => setScope({ ...scope, [key]: [...(scope[key] || []), ''] })} className="mono" style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--primary)', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 12, height: 12, display: 'flex' }}>{I.plus}</span>add</button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {(scope[key] || []).length === 0 && <Empty>Nothing yet.</Empty>}
+                {(scope[key] || []).map((s, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 6 }}>
+                    <input className="input" value={s} onChange={e => setScope({ ...scope, [key]: scope[key].map((x, j) => j === i ? e.target.value : x) })} style={fieldStyle} />
+                    <DelBtn onClick={() => setScope({ ...scope, [key]: scope[key].filter((_, j) => j !== i) })} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, onAdd, children }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+        <span className="eyebrow">{title}</span>
+        {onAdd && <button onClick={onAdd} className="mono" style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--primary)', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 12, height: 12, display: 'flex' }}>{I.plus}</span>add</button>}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{children}</div>
+    </div>
+  );
+}
+function Empty({ children }) { return <div className="muted" style={{ fontSize: 12.5, padding: '4px 2px' }}>{children}</div>; }
+function DelBtn({ onClick }) {
+  return <button onClick={onClick} title="Remove" style={{ flex: '0 0 24px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-faint)', width: 24, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <span style={{ width: 13, height: 13, display: 'flex' }}>{I.x}</span></button>;
 }
 
 window.ClarifyWS = ClarifyWS;

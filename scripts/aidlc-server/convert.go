@@ -138,6 +138,40 @@ func renderClarify(b *strings.Builder, m map[string]any) {
 			fmt.Fprintf(b, "- **%s**: %s\n", str(nm["kind"]), str(nm["text"]))
 		}
 	}
+	if fr := asSlice(m["functional"]); len(fr) > 0 {
+		b.WriteString("\n## Functional requirements\n\n")
+		for _, f := range fr {
+			fm := asMap(f)
+			fmt.Fprintf(b, "- **%s** — %s\n", str(fm["id"]), str(fm["text"]))
+		}
+	}
+	if nf := asSlice(m["nfrs"]); len(nf) > 0 {
+		b.WriteString("\n## Non-functional requirements\n\n| Category | Requirement | Target |\n|---|---|---|\n")
+		for _, n := range nf {
+			nm := asMap(n)
+			fmt.Fprintf(b, "| %s | %s | %s |\n", str(nm["category"]), str(nm["requirement"]), str(nm["target"]))
+		}
+	}
+	if dec := asSlice(m["decisions"]); len(dec) > 0 {
+		b.WriteString("\n## Architectural decisions\n\n")
+		for _, d := range dec {
+			dm := asMap(d)
+			fmt.Fprintf(b, "- **%s**: %s — %s\n", str(dm["decision"]), str(dm["choice"]), str(dm["rationale"]))
+		}
+	}
+	if sc := asMap(m["scope"]); len(sc) > 0 {
+		b.WriteString("\n## MVP scope\n\n")
+		for _, kv := range [][2]string{{"in", "In scope"}, {"out", "Out of scope"}} {
+			items := asSlice(sc[kv[0]])
+			if len(items) == 0 {
+				continue
+			}
+			fmt.Fprintf(b, "**%s:**\n", kv[1])
+			for _, it := range items {
+				fmt.Fprintf(b, "- %s\n", str(it))
+			}
+		}
+	}
 }
 
 func renderStories(b *strings.Builder, m map[string]any) {
