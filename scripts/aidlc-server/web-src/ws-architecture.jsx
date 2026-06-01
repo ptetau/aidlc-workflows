@@ -13,14 +13,12 @@ const NODE_W = 168, NODE_H = 92;
 
 function ArchWS() {
   const seed = window.SEED.arch;
-  const copyJSON = useCopyJSON();   // used only for the Prototype tab's mock payload
   const save = useSave();
-  const [nodes, setNodes] = aUseState(() => seed.nodes.map(n => ({ ...n })));
-  const [edges, setEdges] = aUseState(() => seed.edges.map(e => ({ ...e })));
+  const [nodes, setNodes] = aUseState(() => (seed.nodes || []).map(n => ({ ...n })));
+  const [edges, setEdges] = aUseState(() => (seed.edges || []).map(e => ({ ...e })));
   const [pan, setPan] = aUseState({ x: 20, y: 10 });
   const [zoom, setZoom] = aUseState(1);
-  const [sel, setSel] = aUseState('agg');
-  const [tab, setTab] = aUseState('inspect');
+  const [sel, setSel] = aUseState(null);
   const [conn, setConn] = aUseState(null); // {from, x, y} live connection
   const wrapRef = aUseRef(null);
   const drag = aUseRef(null);
@@ -65,7 +63,7 @@ function ArchWS() {
     e.stopPropagation();
     const p = toCanvas(e.clientX, e.clientY);
     drag.current = { type: 'node', id: n.id, dx: p.x - n.x, dy: p.y - n.y };
-    setSel(n.id); setTab('inspect');
+    setSel(n.id);
   };
   const startPan = e => { drag.current = { type: 'pan', sx: e.clientX, sy: e.clientY, px: pan.x, py: pan.y }; setSel(null); };
   const startConn = (e, n) => {
@@ -80,7 +78,7 @@ function ArchWS() {
     const r = wrapRef.current.getBoundingClientRect();
     const c = toCanvas(r.left + r.width / 2, r.top + r.height / 2);
     setNodes(ns => [...ns, { id, type, label: 'New ' + NODE_META[type].label.toLowerCase(), x: c.x - NODE_W / 2, y: c.y - NODE_H / 2, fields: [] }]);
-    setSel(id); setTab('inspect');
+    setSel(id);
   };
   const delNode = id => { setNodes(ns => ns.filter(n => n.id !== id)); setEdges(es => es.filter(e => e.from !== id && e.to !== id)); setSel(null); };
 
@@ -96,18 +94,6 @@ function ArchWS() {
     nodes: nodes.map(n => ({ id: n.id, type: n.type, label: n.label, x: Math.round(n.x), y: Math.round(n.y), fields: n.fields })),
     edges: edges.map(e => ({ from: e.from, to: e.to })),
   });
-
-  const mockPayload = () => {
-    const start = nodes.find(n => !edges.some(e => e.to === n.id)) || nodes[0];
-    const chain = []; let cur = start, guard = 0;
-    while (cur && guard++ < 12) { chain.push(cur); const nx = edges.find(e => e.from === cur.id); cur = nx ? nodes.find(n => n.id === nx.to) : null; }
-    return {
-      endpoint: 'POST /v1/usage',
-      request: { customerId: 'cus_9F2a', events: [{ type: 'compute.seconds', quantity: 4200, ts: '2026-06-02T00:00:00Z' }] },
-      pipeline: chain.map(n => ({ node: n.id, type: n.type, label: n.label })),
-      response: { accepted: true, aggregatedInto: (chain.find(n => n.type === 'db') || {}).id || null, status: 202 },
-    };
-  };
 
   return (
     <>
@@ -200,24 +186,15 @@ function ArchWS() {
         {/* inspector */}
         <div style={{ width: 296, flex: '0 0 296px', borderLeft: '1px solid var(--line)', background: 'var(--rail)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--rail-line)' }}>
-            <Segmented options={[{ value: 'inspect', label: 'Inspect' }, { value: 'prototype', label: 'Prototype' }]} value={tab} onChange={setTab} />
+            <span className="eyebrow">Inspector</span>
           </div>
           <div className="scroll" style={{ flex: 1, padding: 16 }}>
-            {tab === 'inspect' && (selNode ? <NodeInspector node={selNode}
+            {selNode ? <NodeInspector node={selNode}
               onChange={patch => setNodes(ns => ns.map(n => n.id === selNode.id ? { ...n, ...patch } : n))}
               onDelete={() => delNode(selNode.id)} /> :
               <div className="muted" style={{ textAlign: 'center', padding: '40px 10px', fontSize: 13 }}>
                 <div style={{ width: 30, height: 30, margin: '0 auto 12px', display: 'flex', color: 'var(--ink-faint)', opacity: .5 }}>{I.arch}</div>
-                Select a node to edit its schema, connection rules and config.</div>)}
-            {tab === 'prototype' && (
-              <div>
-                <div className="eyebrow" style={{ marginBottom: 6 }}>Generated mock payload</div>
-                <p className="softline" style={{ fontSize: 12, margin: '0 0 12px', lineHeight: 1.5 }}>Derived from the node relationships you drew. Updates as you connect nodes.</p>
-                <pre className="mono" style={{ margin: 0, fontSize: 11, lineHeight: 1.65, background: 'var(--surface)', border: '1px solid var(--line)',
-                  borderRadius: 11, padding: 13, overflow: 'auto', color: 'var(--ink)' }}>{JSON.stringify(mockPayload(), null, 2)}</pre>
-                <Btn kind="soft" sm icon={I.copy} onClick={() => copyJSON(mockPayload(), 'mock payload')} style={{ marginTop: 10, width: '100%', justifyContent: 'center' }}>Copy mock payload</Btn>
-              </div>
-            )}
+                Select a node to edit its schema, connection rules and config.</div>}
           </div>
         </div>
       </div>

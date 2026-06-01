@@ -144,12 +144,6 @@
   },
   "stories": {
     "intent": "Customers are billed accurately for what they use, can manage payment without support, and finance can reconcile every cent.",
-    "columns": [
-      "Backlog",
-      "This Sprint",
-      "In Progress",
-      "Done"
-    ],
     "epics": [
       {
         "id": "e1",
@@ -171,77 +165,77 @@
       {
         "id": "s1",
         "epic": "e1",
-        "col": 3,
-        "points": 5,
         "title": "Ingest usage events idempotently",
         "criteria": [
           "Given a duplicate event id\nWhen it is received\nThen it is ignored and logged"
         ],
-        "flagged": false
+        "human": false,
+        "done": true,
+        "points": 5
       },
       {
         "id": "s2",
         "epic": "e1",
-        "col": 2,
-        "points": 8,
         "title": "Aggregate events into billable units",
         "criteria": [
           "Given raw usage events for a cycle\nWhen aggregation runs\nThen totals match the metering source within 0.01%"
         ],
-        "flagged": false
+        "human": false,
+        "done": false,
+        "points": 8
       },
       {
         "id": "s3",
         "epic": "e2",
-        "col": 1,
-        "points": 5,
         "title": "Generate invoice at cycle close",
         "criteria": [
           "Given a closed billing cycle\nWhen the invoice job runs\nThen a draft invoice is created with all line items"
         ],
-        "flagged": false
+        "human": false,
+        "done": false,
+        "points": 5
       },
       {
         "id": "s4",
         "epic": "e2",
-        "col": 1,
-        "points": 3,
         "title": "Retry failed payments on schedule",
         "criteria": [
           "Given a failed charge\nWhen the retry window elapses\nThen the charge is re-attempted up to 3 times"
         ],
-        "flagged": true
+        "human": true,
+        "done": false,
+        "points": 3
       },
       {
         "id": "s5",
         "epic": "e2",
-        "col": 0,
-        "points": 3,
         "title": "Self-serve payment method update",
         "criteria": [
           "Given a logged-in customer\nWhen they submit a new card\nThen the default payment method is updated"
         ],
-        "flagged": false
+        "human": false,
+        "done": false,
+        "points": 3
       },
       {
         "id": "s6",
         "epic": "e3",
-        "col": 0,
-        "points": 5,
         "title": "CSV reconciliation export",
         "criteria": [
           "Given a date range\nWhen finance requests an export\nThen a CSV with one row per line item is produced"
         ],
-        "flagged": false
+        "human": false,
+        "done": false,
+        "points": 5
       },
       {
         "id": "s7",
         "epic": "e3",
-        "col": 0,
-        "points": 2,
         "title": "Credit & discount line items",
         "criteria": [],
-        "flagged": true
+        "human": true,
+        "done": false,
+        "points": 2
       }
     ]
   },

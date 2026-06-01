@@ -82,9 +82,9 @@ func TestRoundTripEdgeCases(t *testing.T) {
 			  {"id":"q1","n":"Q1","topic":"T","text":"why?","kind":"text","answer":"free text\nwith newline"},
 			  {"id":"q2","n":"Q2","topic":"M","text":"pick","kind":"multi","options":["a","b","c"],"answer":[0,2]}],
 			"notes":[]}`,
-		"stories": `{"intent":"","columns":["A","B"],"epics":[],
-			"cards":[{"id":"s1","epic":"","col":1,"points":0,"title":"T",
-			  "criteria":["Given x\nWhen y\nThen z"],"flagged":true}]}`,
+		"stories": `{"intent":"","epics":[{"id":"e1","title":"E","color":"var(--blue)"}],
+			"cards":[{"id":"s1","epic":"e1","title":"T","points":0,
+			  "criteria":["Given x\nWhen y\nThen z"],"human":true,"done":false}]}`,
 		"arch":     `{"nodes":[{"id":"n1","type":"api","label":"L","x":80,"y":70,"fields":[]}],"edges":[]}`,
 		"infra":    `{"regions":[],"resources":[],"notes":{}}`,
 		"tests":    `{"types":["Unit"],"components":[{"id":"c","name":"C"}],"cells":{"c-0":{"status":"none","code":""}}}`,
@@ -115,7 +115,7 @@ func TestExportedMarkdownIsReadable(t *testing.T) {
 	_ = json.Unmarshal(seed["stories"], &data)
 	md, _ := renderMarkdown("stories", data)
 	visible := md[:strings.Index(md, dataMarker)]
-	if !strings.Contains(visible, "# Stories") || !strings.Contains(visible, "## Board") {
+	if !strings.Contains(visible, "# Backlog") {
 		t.Error("exported markdown lacks readable headings")
 	}
 }

@@ -55,11 +55,15 @@ aidlc-docs/workspace/
    # or point it explicitly:
    <server-dir>/aidlc-server.exe -docs <project>/aidlc-docs/workspace
    ```
-   Flags: `-port <n>` (default 7421), `-docs <path>`, `-no-open` (suppress auto-open).
+   Flags: `-port <n>` (omit/0 = **auto per-project port**), `-docs <path>`, `-no-open`.
+   **Each project gets its own port** by default — derived from the project path (range 7400–7999),
+   then the next free port if that's taken — so several aidlc projects can run at once without
+   colliding. The server prints the chosen URL on startup: `listening on http://localhost:<port>`.
 4. **First run seeds the workspace** from built-in defaults if the JSON files are missing, so the
    app always opens populated. Replace the seed content by generating real JSON during the
    relevant workflow stage (per `workspace-schemas.md`).
-5. **Tell the user the URL:** `http://localhost:7421` (use the actual port). The browser opens
+5. **Tell the user the URL** — read the actual port from the server's startup line
+   (`listening on http://localhost:<port>`); do not assume a fixed port. The browser opens
    automatically unless `-no-open` was passed.
 
 ## Save semantics

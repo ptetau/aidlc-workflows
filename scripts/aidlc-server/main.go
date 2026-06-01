@@ -18,9 +18,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"io/fs"
 	"log"
 	"mime"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -64,7 +66,7 @@ func main() {
 		return
 	}
 
-	port := flag.Int("port", 7421, "port to listen on (localhost only)")
+	port := flag.Int("port", 0, "port to listen on (0 = auto: a stable per-project port, localhost only)")
 	docsFlag := flag.String("docs", "", "path to aidlc-docs/workspace (default: ./aidlc-docs/workspace)")
 	noOpen := flag.Bool("no-open", false, "do not auto-open the browser")
 	flag.Parse()
@@ -98,16 +100,38 @@ func main() {
 	mux.HandleFunc("GET /api/digests", handleDigests)
 	mux.Handle("/", http.FileServer(http.FS(sub)))
 
-	addr := fmt.Sprintf("127.0.0.1:%d", *port)
-	url := fmt.Sprintf("http://localhost:%d", *port)
+	// Bind a port now (keeping the listener avoids a race). port 0 → a stable per-project
+	// port derived from the docs path, so each aidlc project gets its own and concurrent
+	// projects don't collide; if that port is busy we scan upward for a free one.
+	ln := listen(*port, docsDir)
+	chosen := ln.Addr().(*net.TCPAddr).Port
+	url := fmt.Sprintf("http://localhost:%d", chosen)
 	log.Printf("aidlc-server · docs=%s", docsDir)
 	log.Printf("listening on %s", url)
 	if !*noOpen {
 		go openBrowser(url)
 	}
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.Serve(ln, mux); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// listen binds a TCP listener. requested==0 → a stable port in [7400,7999] hashed from the
+// project key, then the first free port at/above it (scanning a small window).
+func listen(requested int, key string) net.Listener {
+	base := requested
+	if base == 0 {
+		h := fnv.New32a()
+		_, _ = h.Write([]byte(key))
+		base = 7400 + int(h.Sum32()%600)
+	}
+	for p := base; p < base+50; p++ {
+		if l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", p)); err == nil {
+			return l
+		}
+	}
+	log.Fatalf("no free port found near %d", base)
+	return nil
 }
 
 // ---------------- state seeding ----------------

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -261,6 +262,32 @@ func TestReadDigestsSkipsMalformedLines(t *testing.T) {
 	if len(entries) != 2 {
 		t.Errorf("expected 2 valid entries (malformed skipped), got %d", len(entries))
 	}
+}
+
+func TestListenPerProjectPort(t *testing.T) {
+	port := func(key string) int {
+		l := listen(0, key)
+		p := l.Addr().(*net.TCPAddr).Port
+		l.Close()
+		return p
+	}
+	p1 := port("/projects/alpha")
+	if p1 < 7400 || p1 >= 8050 {
+		t.Errorf("auto port %d outside expected range", p1)
+	}
+	// same project path → same port (deterministic), once the prior listener is freed
+	if p2 := port("/projects/alpha"); p1 != p2 {
+		t.Errorf("same project should map to the same port: %d vs %d", p1, p2)
+	}
+	// an explicit port is honored
+	l := listen(0, "/projects/beta")
+	want := l.Addr().(*net.TCPAddr).Port
+	l.Close()
+	l2 := listen(want, "ignored-key")
+	if got := l2.Addr().(*net.TCPAddr).Port; got != want {
+		t.Errorf("explicit port not honored: got %d want %d", got, want)
+	}
+	l2.Close()
 }
 
 func TestIsDoc(t *testing.T) {

@@ -1,6 +1,7 @@
-/* ws-stories.jsx — Story & Requirements Board.
-   Epic tree (filter) + Kanban columns w/ native drag-drop.
-   Card modal: editable acceptance criteria + live Gherkin validator. */
+/* ws-stories.jsx — Backlog: editing-first outline.
+   Agents execute most stories; the human job is specifying them (acceptance criteria) and
+   marking the few that need a person. Grouped by epic; click a story to edit inline.
+   Readiness is derived: done | ready (criteria valid) | needs detail. */
 const { useState: sUseState, useMemo: sUseMemo } = React;
 
 function gherkinCheck(text) {
@@ -13,219 +14,197 @@ function gherkinCheck(text) {
     if (!kw) issues.push(`"${l.slice(0, 22)}…" — no Given/When/Then keyword`);
     else if (kw !== 'And' && kw !== 'But') kinds.add(kw);
   });
-  if (!lines.length) return { ok: false, label: 'empty', tone: 'neutral', issues: ['No criteria yet'] };
+  if (!lines.length) return { ok: false, issues: ['No criteria yet'] };
   ['Given', 'When', 'Then'].forEach(k => { if (!kinds.has(k)) issues.push(`Missing a ${k} clause`); });
-  return { ok: issues.length === 0, label: issues.length === 0 ? 'valid Gherkin' : issues.length + ' issue' + (issues.length > 1 ? 's' : ''),
-    tone: issues.length === 0 ? 'green' : 'amber', issues };
+  return { ok: issues.length === 0, issues };
 }
+
+// derived readiness — drives the pill + filters
+function readiness(card) {
+  if (card.done) return { key: 'done', label: 'done', pill: 'green' };
+  const has = Array.isArray(card.criteria) && card.criteria.length > 0;
+  const allValid = has && card.criteria.every(c => gherkinCheck(c).ok);
+  if (allValid) return { key: 'ready', label: 'ready for agent', pill: 'clay' };
+  return { key: 'draft', label: 'needs detail', pill: 'amber' };
+}
+
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'draft', label: 'Needs detail' },
+  { id: 'ready', label: 'Ready' },
+  { id: 'human', label: 'Human steps' },
+  { id: 'done', label: 'Done' },
+];
 
 function StoriesWS() {
   const seed = window.SEED.stories;
   const save = useSave();
   const [cards, setCards] = sUseState(seed.cards);
-  const [filter, setFilter] = sUseState(null);
-  const [dragId, setDragId] = sUseState(null);
-  const [overCol, setOverCol] = sUseState(null);
-  const [modal, setModal] = sUseState(null); // card id
+  const [filter, setFilter] = sUseState('all');
+  const [open, setOpen] = sUseState(null); // expanded story id
 
-  const epicOf = id => seed.epics.find(e => e.id === id);
-  const shown = filter ? cards.filter(c => c.epic === filter) : cards;
-  const modalCard = cards.find(c => c.id === modal);
-
-  const move = (id, col) => setCards(cs => cs.map(c => c.id === id ? { ...c, col } : c));
+  const epicOf = id => seed.epics.find(e => e.id === id) || { title: 'No epic', color: 'var(--ink-faint)' };
   const update = (id, patch) => setCards(cs => cs.map(c => c.id === id ? { ...c, ...patch } : c));
-  const addStory = () => {
+  const matches = c => {
+    if (filter === 'all') return true;
+    if (filter === 'human') return !!c.human;
+    return readiness(c).key === filter;
+  };
+  const addStory = (epicId) => {
     const id = 's' + Date.now();
-    const epic = filter || seed.epics[0].id;
-    setCards(cs => [...cs, { id, epic, col: 0, points: 3, title: 'New story', criteria: ['Given …\nWhen …\nThen …'], flagged: false }]);
-    setModal(id);
+    setCards(cs => [...cs, { id, epic: epicId, title: 'New story', criteria: [], human: false, done: false, points: 3 }]);
+    setOpen(id);
   };
 
-  // editable state in SEED shape — persisted to workspace/stories.json
-  const buildState = () => ({ intent: seed.intent, columns: seed.columns, epics: seed.epics, cards });
+  const counts = {
+    total: cards.length,
+    human: cards.filter(c => c.human).length,
+    done: cards.filter(c => readiness(c).key === 'done').length,
+    draft: cards.filter(c => readiness(c).key === 'draft').length,
+  };
+
+  const buildState = () => ({ intent: seed.intent, epics: seed.epics, cards });
 
   return (
     <>
-      <WorkHeader eyebrow="Story & Requirements Board" title="Shape the backlog"
-        desc="Business intent branches into epics and stories. Drag cards to set status, open a card to edit acceptance criteria."
+      <WorkHeader eyebrow="Backlog" title="Specify the work"
+        desc="Agents build most stories — your job is to make each one unambiguous and flag the few that need a person. Click a story to edit its acceptance criteria."
         right={<>
-          <span className="pill pill-neutral">{cards.length} stories · {cards.reduce((s, c) => s + c.points, 0)} pts</span>
-          <Btn kind="soft" sm icon={I.plus} onClick={addStory}>Add story</Btn>
+          <span className="pill pill-neutral">{counts.total} stories</span>
+          {counts.human > 0 && <span className="pill pill-amber">{counts.human} human</span>}
+          <span className="pill pill-green">{counts.done} done</span>
           <Btn kind="primary" icon={I.check} onClick={() => save('stories', buildState())}>Save</Btn>
         </>} />
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        {/* epic tree / filter */}
-        <div style={{ width: 244, flex: '0 0 244px', borderRight: '1px solid var(--line)', background: 'var(--rail)',
-          display: 'flex', flexDirection: 'column', padding: '18px 14px' }} className="scroll">
-          <div className="eyebrow" style={{ padding: '0 6px 8px' }}>Business intent</div>
-          <div className="serif" style={{ fontSize: 15.5, lineHeight: 1.4, padding: '0 6px 16px', color: 'var(--ink)' }}>
-            “{seed.intent}”
-          </div>
-          <div className="hr" style={{ margin: '2px 0 14px' }}></div>
-          <div className="eyebrow" style={{ padding: '0 6px 8px' }}>Epics</div>
-          <button onClick={() => setFilter(null)} style={treeRow(!filter)}>
-            <span style={{ width: 9, height: 9, borderRadius: 3, background: 'var(--ink-faint)' }}></span>
-            <span style={{ flex: 1, textAlign: 'left' }}>All stories</span>
-            <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{cards.length}</span>
-          </button>
-          {seed.epics.map(e => {
-            const n = cards.filter(c => c.epic === e.id).length;
+      {/* intent + filters */}
+      <div style={{ padding: '14px 28px 12px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        {seed.intent && <div className="serif" style={{ fontSize: 14.5, color: 'var(--ink-soft)', flex: 1, minWidth: 240 }}>“{seed.intent}”</div>}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {FILTERS.map(f => {
+            const on = filter === f.id;
+            const n = f.id === 'all' ? counts.total : cards.filter(c => f.id === 'human' ? c.human : readiness(c).key === f.id).length;
             return (
-              <div key={e.id}>
-                <button onClick={() => setFilter(filter === e.id ? null : e.id)} style={treeRow(filter === e.id)}>
-                  <span style={{ width: 9, height: 9, borderRadius: 3, background: e.color }}></span>
-                  <span style={{ flex: 1, textAlign: 'left' }}>{e.title}</span>
-                  <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{n}</span>
+              <button key={f.id} onClick={() => setFilter(f.id)} className="mono" style={{
+                border: `1px solid ${on ? 'var(--primary)' : 'var(--line-2)'}`, cursor: 'pointer',
+                background: on ? 'var(--primary-wash)' : 'var(--surface)', color: on ? 'var(--primary-deep)' : 'var(--ink-soft)',
+                borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600,
+              }}>{f.label} <span style={{ opacity: .6 }}>{n}</span></button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* outline */}
+      <div className="scroll" style={{ flex: 1, minHeight: 0, padding: '14px 28px 28px' }}>
+        {seed.epics.map(epic => {
+          const items = cards.filter(c => c.epic === epic.id && matches(c));
+          const epicTotal = cards.filter(c => c.epic === epic.id).length;
+          if (items.length === 0 && filter !== 'all') return null;
+          return (
+            <div key={epic.id} style={{ marginBottom: 22 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
+                <span style={{ width: 9, height: 9, borderRadius: 3, background: epic.color, flex: '0 0 9px' }}></span>
+                <span className="eyebrow" style={{ color: 'var(--ink-soft)' }}>{epic.title}</span>
+                <span className="mono" style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>{epicTotal}</span>
+                <button onClick={() => addStory(epic.id)} className="mono" title="Add a story to this epic" style={{
+                  marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--primary)',
+                  fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ width: 12, height: 12, display: 'flex' }}>{I.plus}</span>add
                 </button>
-                {(filter === e.id) && cards.filter(c => c.epic === e.id).map(c => (
-                  <button key={c.id} onClick={() => setModal(c.id)} style={{ ...treeRow(false), paddingLeft: 26, fontSize: 12, fontWeight: 500 }}>
-                    <span style={{ flex: 1, textAlign: 'left', color: 'var(--ink-soft)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</span>
-                    {c.flagged && <span style={{ width: 13, height: 13, display: 'flex', color: 'var(--amber)' }}>{I.flag}</span>}
-                  </button>
+              </div>
+              <div className="card" style={{ overflow: 'hidden' }}>
+                {items.length === 0 && <div className="muted" style={{ padding: '12px 15px', fontSize: 12.5 }}>No stories.</div>}
+                {items.map((c, i) => (
+                  <StoryRow key={c.id} card={c} epicColor={epic.color} first={i === 0}
+                    expanded={open === c.id} onToggle={() => setOpen(o => o === c.id ? null : c.id)}
+                    onChange={patch => update(c.id, patch)}
+                    onDelete={() => { setCards(cs => cs.filter(x => x.id !== c.id)); setOpen(null); }} />
                 ))}
               </div>
-            );
-          })}
-        </div>
-
-        {/* kanban */}
-        <div className="scroll" style={{ flex: 1, minWidth: 0, display: 'flex', gap: 14, padding: 18, alignItems: 'flex-start' }}>
-          {seed.columns.map((col, ci) => {
-            const colCards = shown.filter(c => c.col === ci);
-            const isOver = overCol === ci;
-            return (
-              <div key={col} onDragOver={e => { e.preventDefault(); setOverCol(ci); }} onDragLeave={() => setOverCol(o => o === ci ? null : o)}
-                onDrop={e => { e.preventDefault(); if (dragId != null) move(dragId, ci); setDragId(null); setOverCol(null); }}
-                style={{ width: 248, flex: '0 0 248px', display: 'flex', flexDirection: 'column', gap: 10,
-                  borderRadius: 13, padding: 10, minHeight: 120,
-                  background: isOver ? 'var(--primary-wash)' : 'var(--surface-2)',
-                  border: `1.5px ${isOver ? 'dashed' : 'solid'} ${isOver ? 'var(--primary-line)' : 'var(--line)'}`,
-                  transition: 'background .15s, border-color .15s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px 2px' }}>
-                  <span className="eyebrow" style={{ color: 'var(--ink-soft)' }}>{col}</span>
-                  <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginLeft: 'auto' }}>{colCards.length}</span>
-                </div>
-                {colCards.map(c => {
-                  const e = epicOf(c.epic);
-                  const allValid = c.criteria.length > 0 && c.criteria.every(cr => gherkinCheck(cr).ok);
-                  return (
-                    <div key={c.id} draggable onDragStart={() => setDragId(c.id)} onDragEnd={() => { setDragId(null); setOverCol(null); }}
-                      onClick={() => setModal(c.id)}
-                      className="card" style={{ padding: '12px 13px', cursor: 'grab', borderLeft: `3px solid ${e.color}`,
-                        opacity: dragId === c.id ? 0.4 : 1, boxShadow: 'var(--shadow-sm)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
-                        <span className="mono" style={{ fontSize: 9.5, color: e.color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em' }}>{e.title}</span>
-                        {c.flagged && <span title="Flagged for AI revision" style={{ width: 13, height: 13, display: 'flex', color: 'var(--amber)', marginLeft: 'auto' }}>{I.flag}</span>}
-                      </div>
-                      <div style={{ fontSize: 13.5, fontWeight: 600, lineHeight: 1.35, marginBottom: 10 }}>{c.title}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span className="pill pill-neutral" style={{ fontSize: 10 }}>{c.points} pts</span>
-                        <span className={`pill pill-${allValid ? 'green' : 'amber'}`} style={{ fontSize: 9.5 }}>
-                          {c.criteria.length} AC{allValid ? ' ✓' : ''}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-                {ci === 0 && (
-                  <button onClick={addStory} className="mono" style={{ border: '1px dashed var(--line-2)', background: 'transparent',
-                    borderRadius: 9, padding: '9px', cursor: 'pointer', color: 'var(--ink-faint)', fontSize: 11.5, fontWeight: 600,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <span style={{ width: 13, height: 13, display: 'flex' }}>{I.plus}</span> add story
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {modalCard && <StoryModal card={modalCard} epics={seed.epics} columns={seed.columns}
-        onClose={() => setModal(null)} onChange={patch => update(modalCard.id, patch)}
-        onDelete={() => { setCards(cs => cs.filter(c => c.id !== modalCard.id)); setModal(null); }} />}
-    </>
-  );
-
-  function treeRow(active) {
-    return { display: 'flex', alignItems: 'center', gap: 9, padding: '8px 8px', borderRadius: 8, width: '100%',
-      border: 'none', cursor: 'pointer', font: 'inherit', fontSize: 13, fontWeight: active ? 650 : 500,
-      background: active ? 'var(--surface)' : 'transparent', color: 'var(--ink)',
-      boxShadow: active ? 'var(--shadow-sm)' : 'none', marginBottom: 1 };
-  }
-}
-
-function StoryModal({ card, epics, columns, onClose, onChange, onDelete }) {
-  const [crit, setCrit] = sUseState(card.criteria.length ? card.criteria : ['Given …\nWhen …\nThen …']);
-  const epic = epics.find(e => e.id === card.epic);
-  const save = (next) => { setCrit(next); onChange({ criteria: next }); };
-
-  return (
-    <Modal eyebrow={epic.title + ' · ' + columns[card.col]}
-      title={<input className="input serif" value={card.title} onChange={e => onChange({ title: e.target.value })}
-        style={{ fontSize: 21, fontWeight: 500, border: 'none', padding: 0, background: 'transparent' }} />}
-      onClose={onClose}
-      footer={<>
-        <Btn kind="ghost" sm icon={I.trash} onClick={onDelete}>Delete</Btn>
-        <div style={{ flex: 1 }}></div>
-        <Btn kind={card.flagged ? 'soft' : 'ghost'} sm icon={I.flag} onClick={() => onChange({ flagged: !card.flagged })}
-          style={card.flagged ? { color: 'var(--amber)', borderColor: 'var(--amber-line)' } : null}>
-          {card.flagged ? 'Flagged for AI' : 'Flag for AI revision'}
-        </Btn>
-        <Btn kind="primary" sm icon={I.check} onClick={onClose}>Done</Btn>
-      </>}>
-      <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
-        <label style={metaCol()}><span className="eyebrow">Epic</span>
-          <select className="select" value={card.epic} onChange={e => onChange({ epic: e.target.value })}>
-            {epics.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
-          </select>
-        </label>
-        <label style={metaCol()}><span className="eyebrow">Status</span>
-          <select className="select" value={card.col} onChange={e => onChange({ col: +e.target.value })}>
-            {columns.map((c, i) => <option key={c} value={i}>{c}</option>)}
-          </select>
-        </label>
-        <label style={{ ...metaCol(), maxWidth: 100 }}><span className="eyebrow">Points</span>
-          <input className="input mono" type="number" min="0" value={card.points} onChange={e => onChange({ points: +e.target.value })} />
-        </label>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-        <span className="eyebrow">Acceptance criteria</span>
-        <span className="mono" style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>Gherkin · Given / When / Then</span>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {crit.map((c, i) => {
-          const v = gherkinCheck(c);
-          return (
-            <div key={i} className="card" style={{ padding: 12, boxShadow: 'none', borderColor: v.tone === 'green' ? 'var(--green-line)' : v.tone === 'amber' ? 'var(--amber-line)' : 'var(--line)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span className="mono" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>AC {i + 1}</span>
-                <span className={`pill pill-${v.tone === 'green' ? 'green' : v.tone === 'amber' ? 'amber' : 'neutral'}`} style={{ fontSize: 9.5 }}>
-                  {v.ok && <span style={{ width: 11, height: 11, display: 'flex' }}>{I.check}</span>}{v.label}
-                </span>
-                <button onClick={() => save(crit.filter((_, j) => j !== i))} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-faint)', width: 22, height: 22 }}>
-                  <span style={{ width: 13, height: 13, display: 'flex' }}>{I.x}</span>
-                </button>
-              </div>
-              <textarea className="textarea mono" rows={3} value={c} style={{ fontSize: 12, lineHeight: 1.6 }}
-                onChange={e => save(crit.map((x, j) => j === i ? e.target.value : x))} />
-              {v.issues.length > 0 && v.tone !== 'neutral' && (
-                <div style={{ marginTop: 7, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  {v.issues.map((iss, k) => <div key={k} className="mono" style={{ fontSize: 10.5, color: 'var(--amber)', display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <span style={{ width: 11, height: 11, display: 'flex' }}>{I.warn}</span>{iss}</div>)}
-                </div>
-              )}
             </div>
           );
         })}
-        <Btn kind="soft" sm icon={I.plus} onClick={() => save([...crit, 'Given …\nWhen …\nThen …'])} style={{ alignSelf: 'flex-start' }}>Add criterion</Btn>
       </div>
-    </Modal>
+    </>
   );
+}
 
-  function metaCol() { return { display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }; }
+function StoryRow({ card, epicColor, first, expanded, onToggle, onChange, onDelete }) {
+  const r = readiness(card);
+  const setCrit = next => onChange({ criteria: next });
+  return (
+    <div style={{ borderTop: first ? 'none' : '1px solid var(--line)' }}>
+      {/* summary row */}
+      <div onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', cursor: 'pointer' }}>
+        <span style={{ width: 13, height: 13, display: 'flex', color: 'var(--ink-faint)', transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform .14s' }}>{I.chevR}</span>
+        <span style={{ width: 4, height: 16, borderRadius: 2, background: epicColor, flex: '0 0 4px' }}></span>
+        <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.title}</span>
+        <span className={`pill pill-${card.human ? 'amber' : 'neutral'}`} style={{ fontSize: 9.5 }}>
+          {card.human ? 'human' : 'agent'}
+        </span>
+        <span className={`pill pill-${r.pill}`} style={{ fontSize: 9.5 }}>
+          {r.key === 'done' && <span style={{ width: 11, height: 11, display: 'flex' }}>{I.check}</span>}{r.label}
+        </span>
+      </div>
+
+      {/* inline editor */}
+      {expanded && (
+        <div className="fadein" style={{ padding: '4px 16px 18px 40px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <input className="input serif" value={card.title} onChange={e => onChange({ title: e.target.value })}
+            style={{ fontSize: 16, fontWeight: 500 }} />
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span className="eyebrow">Acceptance criteria</span>
+              <span className="mono" style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>Gherkin · Given / When / Then — agents build to these</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {(card.criteria || []).map((c, i) => {
+                const v = gherkinCheck(c);
+                return (
+                  <div key={i} className="card" style={{ padding: 11, boxShadow: 'none', borderColor: v.ok ? 'var(--green-line)' : 'var(--amber-line)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
+                      <span className="mono" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>AC {i + 1}</span>
+                      <span className={`pill pill-${v.ok ? 'green' : 'amber'}`} style={{ fontSize: 9 }}>
+                        {v.ok ? 'valid' : v.issues.length + ' issue' + (v.issues.length > 1 ? 's' : '')}</span>
+                      <button onClick={() => setCrit(card.criteria.filter((_, j) => j !== i))} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-faint)', width: 20, height: 20 }}>
+                        <span style={{ width: 12, height: 12, display: 'flex' }}>{I.x}</span></button>
+                    </div>
+                    <textarea className="textarea mono" rows={3} value={c} style={{ fontSize: 12, lineHeight: 1.6 }}
+                      onChange={e => setCrit(card.criteria.map((x, j) => j === i ? e.target.value : x))} />
+                    {!v.ok && <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {v.issues.map((iss, k) => <div key={k} className="mono" style={{ fontSize: 10.5, color: 'var(--amber)', display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span style={{ width: 11, height: 11, display: 'flex' }}>{I.warn}</span>{iss}</div>)}
+                    </div>}
+                  </div>
+                );
+              })}
+              <Btn kind="soft" sm icon={I.plus} onClick={() => setCrit([...(card.criteria || []), 'Given …\nWhen …\nThen …'])} style={{ alignSelf: 'flex-start' }}>Add criterion</Btn>
+            </div>
+          </div>
+
+          {/* execution controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap', paddingTop: 4 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--ink-soft)' }}>
+              <Switch on={!!card.human} onChange={v => onChange({ human: v })} />
+              Needs a human step
+              <span className="muted" style={{ fontSize: 11 }}>(decision, credential, manual check)</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--ink-soft)' }}>
+              <Switch on={!!card.done} onChange={v => onChange({ done: v })} />
+              Done
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: 'var(--ink-soft)', marginLeft: 'auto' }}>
+              size
+              <input className="input mono" type="number" min="0" value={card.points ?? 0}
+                onChange={e => onChange({ points: +e.target.value })} style={{ width: 64, fontSize: 12, padding: '6px 8px' }} />
+            </label>
+            <Btn kind="ghost" sm icon={I.trash} onClick={onDelete}>Delete</Btn>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 window.StoriesWS = StoriesWS;

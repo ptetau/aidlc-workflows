@@ -117,6 +117,52 @@ test('agent ingest reply auto-appears via polling (no reload) and raises the unr
   assert.equal(await page.locator('button:has-text("Digest") span.mono').count(), 0, 'badge cleared after opening');
 });
 
+test('Tests workspace renders on a non-demo project (regression: no hardcoded cell id)', async (t) => {
+  // a project whose components are NOT the billing-service demo ids — used to crash on `selC.name`
+  const app = await openApp({
+    project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },
+    tests: {
+      types: ['Unit', 'Integration'],
+      components: [{ id: 'widget', name: 'Widget' }, { id: 'gizmo', name: 'Gizmo' }],
+      cells: { 'widget-0': { status: 'pass', code: "it('works', ()=>{})" }, 'gizmo-1': { status: 'none', code: '' } },
+    },
+  });
+  t.after(app.cleanup);
+  const { page } = app;
+  await page.evaluate(() => localStorage.setItem('aidlc-ws', 'tests'));
+  await page.reload({ waitUntil: 'networkidle' });
+  await assert.doesNotReject(page.waitForSelector('h1', { timeout: 4000 }), 'Tests renders without crashing');
+  assert.deepEqual(page.__errors, [], 'no page errors on the Tests workspace');
+  assert.ok(await page.getByText('Widget').first().isVisible(), 'real component shown');
+});
+
+test('Stories outline: readiness + human marker, inline criteria editing', async (t) => {
+  const app = await openApp({
+    project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },
+    stories: {
+      intent: 'Ship it.',
+      epics: [{ id: 'e1', title: 'Core', color: 'var(--blue)' }],
+      cards: [
+        { id: 's1', epic: 'e1', title: 'Done one', criteria: ['Given a\nWhen b\nThen c'], human: false, done: true, points: 2 },
+        { id: 's2', epic: 'e1', title: 'Human one', criteria: [], human: true, done: false, points: 1 },
+      ],
+    },
+  });
+  t.after(app.cleanup);
+  const { page } = app;
+  await page.evaluate(() => localStorage.setItem('aidlc-ws', 'stories'));
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('h1');
+  assert.equal(await page.getByRole('button', { name: /Backlog|In Progress|This Sprint/ }).count(), 0, 'no kanban columns');
+  assert.ok(await page.getByText('done').first().isVisible(), 'readiness pill shown');
+  assert.ok(await page.getByText('human').first().isVisible(), 'human marker shown');
+  // expanding a story reveals inline criteria editing
+  await page.getByText('Done one').first().click();
+  await page.waitForTimeout(200);
+  assert.ok(await page.getByText('Acceptance criteria').first().isVisible(), 'inline editor opens');
+  assert.deepEqual(page.__errors, []);
+});
+
 test('boots from a real (non-demo) seeded project', async (t) => {
   const app = await openApp({
     project: { name: 'AcmeWidgets', repo: 'acme/widgets', branch: 'main', version: 'v9' },

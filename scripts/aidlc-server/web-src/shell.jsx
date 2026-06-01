@@ -1,11 +1,17 @@
 /* shell.jsx — connected app shell: rail nav, top bar, theme, routing. */
 const WORKSPACES = [
-  { id: 'clarify', label: 'Clarification', icon: I.clarify, hue: 'var(--primary)', replaces: 'Clarification Documents' },
-  { id: 'stories', label: 'Stories', icon: I.stories, hue: 'var(--blue)', replaces: 'Requirements & User Stories' },
-  { id: 'arch', label: 'Architecture', icon: I.arch, hue: 'var(--violet)', replaces: 'Application Architecture' },
-  { id: 'infra', label: 'Infrastructure', icon: I.infra, hue: 'var(--green)', replaces: 'Infra & Deployment' },
-  { id: 'tests', label: 'Tests', icon: I.tests, hue: 'var(--amber)', replaces: 'Test Summaries' },
-  { id: 'steering', label: 'Steering', icon: I.steer, hue: 'var(--teal)', replaces: 'Steering Files' },
+  { id: 'clarify', label: 'Clarification', icon: I.clarify, hue: 'var(--primary)', phase: 'Inception' },
+  { id: 'stories', label: 'Stories', icon: I.stories, hue: 'var(--blue)', phase: 'Inception' },
+  { id: 'arch', label: 'Architecture', icon: I.arch, hue: 'var(--violet)', phase: 'Inception' },
+  { id: 'infra', label: 'Infrastructure', icon: I.infra, hue: 'var(--green)', phase: 'Construction' },
+  { id: 'tests', label: 'Tests', icon: I.tests, hue: 'var(--amber)', phase: 'Construction' },
+  { id: 'steering', label: 'Steering', icon: I.steer, hue: 'var(--teal)', phase: 'Steering' },
+];
+// nav groups, in workflow order — Steering is cross-cutting, shown after a divider
+const NAV_GROUPS = [
+  { phase: 'Inception', items: WORKSPACES.filter(w => w.phase === 'Inception') },
+  { phase: 'Construction', items: WORKSPACES.filter(w => w.phase === 'Construction') },
+  { phase: 'Steering', items: WORKSPACES.filter(w => w.phase === 'Steering') },
 ];
 
 function useTheme() {
@@ -36,27 +42,36 @@ function Rail({ active, setActive, theme, setTheme }) {
         </div>
       </div>
 
-      <div className="eyebrow" style={{ padding: '6px 10px 8px' }}>Workspaces</div>
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {WORKSPACES.map(w => {
-          const on = w.id === active;
-          return (
-            <button key={w.id} onClick={() => setActive(w.id)} title={'Replaces: ' + w.replaces} style={{
-              display: 'flex', alignItems: 'center', gap: 11, padding: '9px 10px', borderRadius: 9,
-              border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%', font: 'inherit',
-              fontSize: 13.5, fontWeight: on ? 650 : 500,
-              background: on ? 'var(--surface)' : 'transparent',
-              color: on ? 'var(--ink)' : 'var(--ink-soft)',
-              boxShadow: on ? 'var(--shadow-sm)' : 'none', transition: 'background .14s, color .14s',
-            }}
-            onMouseEnter={e => { if (!on) e.currentTarget.style.background = 'rgba(120,90,50,.06)'; }}
-            onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent'; }}>
-              <span style={{ width: 20, height: 20, display: 'flex', color: on ? w.hue : 'var(--ink-faint)', flex: '0 0 20px' }}>{w.icon}</span>
-              <span style={{ flex: 1 }}>{w.label}</span>
-              {on && <span style={{ width: 6, height: 6, borderRadius: 3, background: w.hue }}></span>}
-            </button>
-          );
-        })}
+      <nav className="scroll" style={{ display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: '0 1 auto' }}>
+        {NAV_GROUPS.map((g, gi) => (
+          <div key={g.phase} style={{ marginBottom: 8 }}>
+            {g.phase === 'Steering'
+              ? <div className="hr" style={{ margin: '4px 10px 10px' }}></div>
+              : null}
+            <div className="eyebrow" style={{ padding: gi === 0 ? '6px 10px 8px' : '2px 10px 8px' }}>
+              {g.phase === 'Steering' ? 'Cross-cutting' : g.phase}
+            </div>
+            {g.items.map(w => {
+              const on = w.id === active;
+              return (
+                <button key={w.id} onClick={() => setActive(w.id)} title={w.phase} style={{
+                  display: 'flex', alignItems: 'center', gap: 11, padding: '9px 10px', borderRadius: 9,
+                  border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%', font: 'inherit',
+                  fontSize: 13.5, fontWeight: on ? 650 : 500,
+                  background: on ? 'var(--surface)' : 'transparent',
+                  color: on ? 'var(--ink)' : 'var(--ink-soft)',
+                  boxShadow: on ? 'var(--shadow-sm)' : 'none', transition: 'background .14s, color .14s',
+                }}
+                onMouseEnter={e => { if (!on) e.currentTarget.style.background = 'rgba(120,90,50,.06)'; }}
+                onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent'; }}>
+                  <span style={{ width: 20, height: 20, display: 'flex', color: on ? w.hue : 'var(--ink-faint)', flex: '0 0 20px' }}>{w.icon}</span>
+                  <span style={{ flex: 1 }}>{w.label}</span>
+                  {on && <span style={{ width: 6, height: 6, borderRadius: 3, background: w.hue }}></span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -74,12 +89,16 @@ function Rail({ active, setActive, theme, setTheme }) {
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 8px 4px' }}>
-          <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#d8a05f,#c6553f)', flex: '0 0 26px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 700 }}>PR</div>
-          <div style={{ lineHeight: 1.2 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600 }}>Priya R.</div>
-            <div className="mono" style={{ fontSize: 9.5, color: 'var(--ink-faint)' }}>tech lead</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px 4px' }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--green)', flex: '0 0 7px' }}></span>
+          <div className="mono" style={{ lineHeight: 1.3, minWidth: 0 }}>
+            {(() => {
+              const p = (window.SEED && window.SEED.project) || {};
+              return <>
+                <div style={{ fontSize: 10, color: 'var(--ink-soft)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.branch ? 'branch ' + p.branch : 'local workspace'}</div>
+                <div style={{ fontSize: 9, color: 'var(--ink-faint)' }}>aidlc · local</div>
+              </>;
+            })()}
           </div>
         </div>
       </div>
@@ -99,8 +118,8 @@ function TopBar({ active, onOpenDigest, unread }) {
         <span style={{ color: 'var(--ink)', fontWeight: 600 }}>{w.label}</span>
       </div>
       <div style={{ flex: 1 }}></div>
-      <div className="pill pill-neutral" title="This screen replaces a static markdown document in the AI-DLC flow">
-        replaces · {w.replaces}
+      <div className="pill pill-neutral" title={w.phase === 'Steering' ? 'Cross-cutting policy — applies across phases' : 'AI-DLC phase'}>
+        {w.phase === 'Steering' ? 'cross-cutting' : w.phase.toLowerCase()}
       </div>
       <button onClick={onOpenDigest} title="Digest — the change-conversation with aidlc" style={{
         position: 'relative', display: 'flex', alignItems: 'center', gap: 7, marginLeft: 4,

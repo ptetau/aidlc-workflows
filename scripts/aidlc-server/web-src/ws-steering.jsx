@@ -1,70 +1,27 @@
 /* ws-steering.jsx — Steering Policy Center.
-   Rule groups (toggles/sliders), project-specific exceptions, and a live
-   Playground that rewrites pasted code according to the active policies. */
+   Rule groups (toggles/sliders) the agents must follow, plus project-specific exceptions. */
 const { useState: pUseState } = React;
-
-function rewrite(code, active, maxLen) {
-  let out = code; const changes = [];
-  if (active.r7) {
-    const before = out;
-    out = out.replace(/\b([a-z]+)(_[a-z]+)+\b/g, m => m.replace(/_([a-z])/g, (_, c) => c.toUpperCase()));
-    if (out !== before) changes.push({ rule: 'camelCase functions', desc: 'snake_case → camelCase' });
-  }
-  if (active.r4) {
-    const before = out;
-    out = out.replace(/(\d+)\.0+\b/g, '$1');
-    if (out !== before) changes.push({ rule: 'Integer cents', desc: 'float literals → integers' });
-    if (/total\s*=\s*total\s*\+/.test(out)) { out = out.replace(/var total = 0/, 'let total = 0 /* cents */'); }
-  }
-  if (active.r2) {
-    const before = out;
-    out = out.replace(/"([^"]*)"/g, "'$1'");
-    if (out !== before) changes.push({ rule: 'Single quotes', desc: 'double → single quotes' });
-  }
-  if (active.r1) {
-    const before = out;
-    out = out.split('\n').map(l => {
-      const t = l.trimEnd();
-      if (t && !/[;{}\(]$/.test(t) && !/^\s*(\/\/|function|for|if|else|while|})/.test(t) && !t.endsWith(',')) return l.replace(/\s*$/, '') + ';';
-      return l;
-    }).join('\n');
-    if (out !== before) changes.push({ rule: 'Semicolons', desc: 'added missing semicolons' });
-  }
-  if (active.r6) {
-    const before = out;
-    out = out.replace(/\bvar\b/g, 'const').replace(/const total = 0/, 'let total = 0');
-    if (out !== before) changes.push({ rule: 'Modern declarations', desc: 'var → const/let' });
-  }
-  const longLines = active.r3 ? out.split('\n').filter(l => l.length > maxLen).length : 0;
-  if (longLines) changes.push({ rule: 'Max line length', desc: `${longLines} line(s) exceed ${maxLen} cols` });
-  return { out, changes };
-}
 
 function SteeringWS() {
   const seed = window.SEED.steering;
-  const copyJSON = useCopyJSON();   // used only for the Playground's rewrite copy
   const save = useSave();
-  const [groups, setGroups] = pUseState(() => JSON.parse(JSON.stringify(seed.groups)));
-  const [exceptions, setExceptions] = pUseState(seed.exceptions);
-  const [code, setCode] = pUseState(seed.sample);
+  const [groups, setGroups] = pUseState(() => JSON.parse(JSON.stringify(seed.groups || [])));
+  const [exceptions, setExceptions] = pUseState(seed.exceptions || []);
   const [adding, setAdding] = pUseState(false);
   const [exDraft, setExDraft] = pUseState({ rule: '', scope: '', note: '' });
 
   const allRules = groups.flatMap(g => g.rules);
-  const active = Object.fromEntries(allRules.map(r => [r.id, r.on]));
-  const maxLen = (allRules.find(r => r.id === 'r3') || {}).value || 100;
   const activeCount = allRules.filter(r => r.on).length;
-  const result = rewrite(code, active, maxLen);
 
   const setRule = (gid, rid, patch) => setGroups(gs => gs.map(g => g.id === gid ? { ...g, rules: g.rules.map(r => r.id === rid ? { ...r, ...patch } : r) } : g));
 
-  // editable state in SEED shape — persisted to workspace/steering.json
-  const buildState = () => ({ groups, exceptions, sample: code });
+  // editable state in SEED shape — persisted to workspace/steering.json (sample carried through)
+  const buildState = () => ({ groups, exceptions, sample: seed.sample });
 
   return (
     <>
       <WorkHeader eyebrow="Steering Policy Center" title="Govern the agents"
-        desc="Toggle the standards the AI must follow. Test them in the Playground: paste code and see exactly how it gets rewritten."
+        desc="The standards every agent must follow when building this project. Toggle rules and record project-specific exceptions."
         right={<>
           <span className="pill pill-clay">{activeCount} active rules</span>
           <Btn kind="primary" icon={I.check} onClick={() => save('steering', buildState())}>Save</Btn>
@@ -72,7 +29,7 @@ function SteeringWS() {
 
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
         {/* rules */}
-        <div className="scroll" style={{ width: 420, flex: '0 0 420px', borderRight: '1px solid var(--line)', padding: 22 }}>
+        <div className="scroll" style={{ flex: 1, minWidth: 0, padding: '22px max(22px, calc((100% - 720px) / 2))' }}>
           {groups.map(g => (
             <div key={g.id} style={{ marginBottom: 22 }}>
               <div className="eyebrow" style={{ marginBottom: 10 }}>{g.title}</div>
@@ -135,47 +92,6 @@ function SteeringWS() {
           </div>
         </div>
 
-        {/* playground */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: 'var(--rail)' }}>
-          <div style={{ padding: '16px 22px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ width: 17, height: 17, display: 'flex', color: 'var(--primary)' }}>{I.bolt}</span>
-            <div>
-              <div style={{ fontSize: 14.5, fontWeight: 700 }}>Policy Playground</div>
-              <div className="mono" style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>see how the AI rewrites code under the active rules</div>
-            </div>
-          </div>
-          <div className="scroll" style={{ flex: 1, padding: '4px 22px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <div className="eyebrow" style={{ marginBottom: 7 }}>Your code</div>
-              <textarea className="textarea mono scroll" spellCheck={false} value={code} onChange={e => setCode(e.target.value)} rows={7}
-                style={{ fontSize: 12.5, lineHeight: 1.6, background: 'var(--surface)' }} />
-            </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
-                <span className="eyebrow">AI-rewritten output</span>
-                {result.changes.length > 0
-                  ? <span className="pill pill-green" style={{ fontSize: 9.5 }}>{result.changes.length} rule{result.changes.length > 1 ? 's' : ''} applied</span>
-                  : <span className="pill pill-neutral" style={{ fontSize: 9.5 }}>no changes</span>}
-                <Btn kind="soft" sm icon={I.copy} onClick={() => copyJSON({ input: code, output: result.out, appliedRules: result.changes }, 'rewrite')} style={{ marginLeft: 'auto' }}>Copy</Btn>
-              </div>
-              <pre className="mono scroll" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, background: 'var(--surface)', border: '1px solid var(--green-line)', borderRadius: 11, padding: 14, color: 'var(--ink)', overflow: 'auto', maxHeight: 220 }}>{result.out}</pre>
-            </div>
-            {result.changes.length > 0 && (
-              <div>
-                <div className="eyebrow" style={{ marginBottom: 8 }}>What changed & why</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                  {result.changes.map((c, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12 }}>
-                      <span style={{ width: 15, height: 15, display: 'flex', color: 'var(--green)', flex: '0 0 15px' }}>{I.check}</span>
-                      <span style={{ fontWeight: 600 }}>{c.rule}</span>
-                      <span className="softline">— {c.desc}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
     </>
   );

@@ -141,35 +141,30 @@ func renderClarify(b *strings.Builder, m map[string]any) {
 }
 
 func renderStories(b *strings.Builder, m map[string]any) {
-	b.WriteString("# Stories\n\n")
+	b.WriteString("# Backlog\n\n")
 	if intent := str(m["intent"]); intent != "" {
 		fmt.Fprintf(b, "> %s\n\n", intent)
 	}
-	epics := asSlice(m["epics"])
-	titleOf := map[string]string{}
-	if len(epics) > 0 {
-		b.WriteString("## Epics\n\n")
-		for _, e := range epics {
-			em := asMap(e)
-			titleOf[str(em["id"])] = str(em["title"])
-			fmt.Fprintf(b, "- `%s` — %s\n", str(em["id"]), str(em["title"]))
-		}
-		b.WriteString("\n")
-	}
-	cols := asSlice(m["columns"])
-	b.WriteString("## Board\n\n")
-	for ci, col := range cols {
-		fmt.Fprintf(b, "### %s\n\n", str(col))
+	// group stories under their epic; agents execute most, humans mark the few + specify criteria
+	for _, e := range asSlice(m["epics"]) {
+		em := asMap(e)
+		eid := str(em["id"])
+		fmt.Fprintf(b, "## %s\n\n", str(em["title"]))
 		for _, c := range asSlice(m["cards"]) {
 			cm := asMap(c)
-			if int(num(cm["col"])) != ci {
+			if str(cm["epic"]) != eid {
 				continue
 			}
-			flag := ""
-			if asBool(cm["flagged"]) {
-				flag = " ⚑"
+			tags := []string{}
+			if asBool(cm["human"]) {
+				tags = append(tags, "human")
+			} else {
+				tags = append(tags, "agent")
 			}
-			fmt.Fprintf(b, "- **%s** (%s · %s pts)%s\n", str(cm["title"]), titleOf[str(cm["epic"])], trimNum(num(cm["points"])), flag)
+			if asBool(cm["done"]) {
+				tags = append(tags, "done")
+			}
+			fmt.Fprintf(b, "- **%s** _(%s)_\n", str(cm["title"]), strings.Join(tags, ", "))
 			for _, cr := range asSlice(cm["criteria"]) {
 				oneLine := strings.ReplaceAll(str(cr), "\n", " / ")
 				fmt.Fprintf(b, "  - %s\n", oneLine)
