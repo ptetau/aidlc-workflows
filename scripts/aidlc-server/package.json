@@ -5,9 +5,13 @@
   "description": "Build pipeline for the AI-DLC Workspace web UI (compiled + embedded into the Go binary).",
   "type": "module",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "test": "go test ./... && node --test \"test/*.test.mjs\"",
+    "test:go": "go test ./...",
+    "test:ui": "node --test \"test/*.test.mjs\""
   },
   "devDependencies": {
-    "esbuild": "0.24.0"
+    "esbuild": "0.24.0",
+    "playwright-core": "1.60.0"
   }
 }
