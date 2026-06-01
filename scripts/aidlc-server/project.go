@@ -7,12 +7,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // aidlcDocsRoot is the aidlc-docs/ dir (parent of the workspace/ dir the server serves).
@@ -182,6 +184,81 @@ func handleDocs(w http.ResponseWriter, r *http.Request) {
 	mu.Lock()
 	defer mu.Unlock()
 	writeJSON(w, listDocs())
+}
+
+type eventReq struct {
+	Type     string `json:"type"`     // "gate" | "decision"
+	Stage    string `json:"stage"`    // the stage/workspace the decision is about
+	Decision string `json:"decision"` // "approve" | "changes" | free text
+	Note     string `json:"note"`
+}
+
+// handleEvent records a human decision (e.g. a gate approval) as a `user` ledger entry that
+// /aidlc ingest consumes. The server never drives the workflow — the agent does.
+func handleEvent(w http.ResponseWriter, r *http.Request) {
+	var req eventReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpError(w, http.StatusBadRequest, "bad request: %v", err)
+		return
+	}
+	typ := req.Type
+	if typ == "" {
+		typ = "decision"
+	}
+	summary := "Gate · " + req.Decision
+	if req.Stage != "" {
+		summary += " — " + req.Stage
+	}
+	if req.Note != "" {
+		summary += ": " + req.Note
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	now := time.Now().UTC()
+	entry := digest{
+		ID: fmt.Sprintf("%d-%s", now.UnixNano(), typ), Ts: now.Format(time.RFC3339),
+		Actor: "user", Type: typ, Workspace: req.Stage, Summary: summary,
+	}
+	if err := appendDigest(entry); err != nil {
+		httpError(w, http.StatusInternalServerError, "append: %v", err)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true, "digest": entry})
+}
+
+type planEntry struct {
+	Path  string `json:"path"`
+	Title string `json:"title"`
+	Done  int    `json:"done"`
+	Total int    `json:"total"`
+}
+
+// handlePlans reflects the [ ]/[x] checkbox progress of plan-like docs (the markdown execution
+// engine). Read-only: the agent flips the boxes in the canonical markdown.
+func handlePlans(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	defer mu.Unlock()
+	root := aidlcDocsRoot()
+	out := []planEntry{}
+	for _, d := range listDocs() {
+		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(d.Path)))
+		if err != nil {
+			continue
+		}
+		done, total := 0, 0
+		for _, line := range splitLines(data) {
+			if m := reCheckbox.FindStringSubmatch(strings.TrimSpace(string(line))); m != nil {
+				total++
+				if m[1] != " " {
+					done++
+				}
+			}
+		}
+		if total > 0 {
+			out = append(out, planEntry{Path: d.Path, Title: d.Title, Done: done, Total: total})
+		}
+	}
+	writeJSON(w, out)
 }
 
 // handleDoc returns the raw markdown of one doc; path is sanitized to stay within aidlc-docs/.

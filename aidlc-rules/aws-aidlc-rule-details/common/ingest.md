@@ -18,9 +18,12 @@ edits, react to them".
 
 ## Protocol
 
-1. **Detect changes.** For each of the six docs, compare the live `workspace/<doc>.json` against
+1. **Detect changes.** For each covered doc, compare the live `workspace/<doc>.json` against
    `.snapshot/<doc>.json`. List the documents that changed and, within each, the meaningful field
-   changes. Read the `user` digest notes for intent.
+   changes. Read the `user` digest notes for intent. Also note any **gate decisions** — ledger
+   entries with `"type":"gate"` carry `decision: approve | changes` for a stage (the user clicked
+   Approve / Request-changes in the Overview). Treat `approve` as that stage's approval gate being
+   satisfied (proceed); treat `changes` as a request to revise that stage per the note.
 
 2. **React — regenerate downstream.** For each changed document, propagate the change by
    re-entering the relevant existing workflow stage, guided by the diff. Typical chains:

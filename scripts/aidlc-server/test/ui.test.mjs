@@ -166,6 +166,25 @@ test('Stories outline: readiness + human marker, inline criteria editing', async
   assert.deepEqual(page.__errors, []);
 });
 
+test('Overview gate: Approve records a gate event in the ledger', async (t) => {
+  const app = await openApp();
+  t.after(app.cleanup);
+  const root = dirname(app.ws);
+  writeFileSync(join(root, 'aidlc-state.md'),
+    '# State\n\n## Project Information\n- **Current Stage**: Requirements Analysis\n\n## Stage Progress\n- [x] INCEPTION - Requirements Analysis\n');
+  const { page, ws } = app;
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('nav button', { hasText: 'Overview' }).first().click();
+  await page.waitForTimeout(400);
+  assert.ok(await page.getByText(/Approval gate/).first().isVisible(), 'gate card shown');
+  await page.getByRole('button', { name: /Approve & continue/ }).first().click();
+  await page.waitForSelector('.toast', { timeout: 4000 });
+  const ds = readDigests(ws);
+  const gate = ds.find(d => d.type === 'gate');
+  assert.ok(gate && /approve/i.test(gate.summary), 'gate event recorded in ledger');
+  assert.deepEqual(page.__errors, []);
+});
+
 test('Overview reflects aidlc-state.md; Documents lists & renders markdown', async (t) => {
   const app = await openApp();
   t.after(app.cleanup);

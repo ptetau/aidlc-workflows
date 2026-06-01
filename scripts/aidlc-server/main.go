@@ -101,6 +101,8 @@ func main() {
 	mux.HandleFunc("GET /api/project", handleProject) // read-only engine state (parsed aidlc-state.md)
 	mux.HandleFunc("GET /api/docs", handleDocs)        // all aidlc-docs/**/*.md outside workspace/
 	mux.HandleFunc("GET /api/doc", handleDoc)          // raw markdown of one doc
+	mux.HandleFunc("GET /api/plans", handlePlans)      // checkbox progress of plan-like docs
+	mux.HandleFunc("POST /api/event", handleEvent)     // record a human decision (gate) as a ledger event
 	mux.Handle("/", http.FileServer(http.FS(sub)))
 
 	// Bind a port now (keeping the listener avoids a race). port 0 → a stable per-project
@@ -244,7 +246,8 @@ type change struct {
 type digest struct {
 	ID        string   `json:"id"`
 	Ts        string   `json:"ts"`
-	Actor     string   `json:"actor"` // "user" | "agent"
+	Actor     string   `json:"actor"`          // "user" | "agent"
+	Type      string   `json:"type,omitempty"` // "" (edit) | "gate" | "decision"
 	Workspace string   `json:"workspace,omitempty"`
 	Summary   string   `json:"summary"`
 	NextSteps []string `json:"nextSteps,omitempty"`

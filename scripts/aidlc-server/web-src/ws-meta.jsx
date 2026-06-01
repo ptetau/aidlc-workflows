@@ -13,12 +13,26 @@ const STAGE_STATUS = {
 function OverviewWS() {
   const [st, setSt] = mUseState(null);
   const [err, setErr] = mUseState(null);
+  const [plans, setPlans] = mUseState([]);
+  const [gateNote, setGateNote] = mUseState('');
+  const push = useToast();
   mUseEffect(() => {
     fetch('/api/project').then(r => r.json()).then(setSt).catch(e => setErr(String(e)));
+    fetch('/api/plans').then(r => r.json()).then(d => Array.isArray(d) && setPlans(d)).catch(() => {});
   }, []);
+
+  const decide = (stage, decision) => {
+    fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'gate', stage, decision, note: gateNote }) })
+      .then(r => { if (!r.ok) throw 0; setGateNote('');
+        push(<><span className="tdot"></span><span>Recorded <b>{decision}</b> — run <code>/aidlc ingest</code> for aidlc to act</span></>);
+        window.dispatchEvent(new CustomEvent('aidlc-saved', { detail: { id: 'gate' } })); })
+      .catch(() => push(<><span className="tdot" style={{ background: 'var(--danger)' }}></span><span>Could not record decision</span></>));
+  };
 
   if (err) return <div style={{ padding: 40 }} className="muted">Could not load project state: {err}</div>;
   if (!st) return <div style={{ padding: 40 }} className="muted">Loading…</div>;
+  const currentStage = (st.info && st.info['Current Stage']) || '';
 
   const project = st.project || {};
   const byPhase = {};
@@ -49,6 +63,22 @@ function OverviewWS() {
           </div>
         )}
 
+        {/* approval gate — records a decision the agent consumes via /aidlc ingest */}
+        {st.hasState && currentStage && (
+          <div className="card" style={{ padding: '16px 18px' }}>
+            <div className="eyebrow" style={{ marginBottom: 8 }}>Approval gate · {currentStage}</div>
+            <p className="softline" style={{ margin: '0 0 12px', fontSize: 12.5, lineHeight: 1.5 }}>
+              Record your decision for the current stage. It’s logged to the digest; run <code>/aidlc ingest</code> and the agent proceeds or revises accordingly — the server doesn’t drive the workflow.
+            </p>
+            <textarea className="textarea" rows={2} placeholder="Optional note (what to change, why approving…)" value={gateNote}
+              onChange={e => setGateNote(e.target.value)} style={{ fontSize: 12.5, marginBottom: 10 }} />
+            <div style={{ display: 'flex', gap: 9 }}>
+              <Btn kind="green" icon={I.check} onClick={() => decide(currentStage, 'approve')}>Approve &amp; continue</Btn>
+              <Btn kind="ghost" icon={I.edit} onClick={() => decide(currentStage, 'changes')}>Request changes</Btn>
+            </div>
+          </div>
+        )}
+
         {/* stage progress by phase */}
         {phases.map(phase => (
           <div key={phase}>
@@ -69,6 +99,27 @@ function OverviewWS() {
             </div>
           </div>
         ))}
+
+        {/* plan progress (reflects [ ]/[x] in plans/*.md — the markdown execution engine) */}
+        {plans.length > 0 && (
+          <div>
+            <div className="eyebrow" style={{ marginBottom: 10 }}>Plans · checkbox progress</div>
+            <div className="card" style={{ overflow: 'hidden' }}>
+              {plans.map((p, i) => {
+                const pct = p.total ? Math.round((p.done / p.total) * 100) : 0;
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 15px', borderTop: i ? '1px solid var(--line)' : 'none' }}>
+                    <span style={{ flex: 1, fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.path}>{p.title}</span>
+                    <div style={{ flex: '0 0 140px', height: 6, borderRadius: 4, background: 'var(--surface-3)', overflow: 'hidden' }}>
+                      <div style={{ width: pct + '%', height: '100%', background: pct === 100 ? 'var(--green)' : 'var(--primary)' }}></div>
+                    </div>
+                    <span className="mono" style={{ fontSize: 11, color: 'var(--ink-faint)', flex: '0 0 56px', textAlign: 'right' }}>{p.done}/{p.total}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* extensions */}
         {(st.extensions || []).length > 0 && (

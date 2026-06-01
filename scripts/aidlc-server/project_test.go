@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -126,6 +127,49 @@ func TestListDocsExcludesWorkspace(t *testing.T) {
 		if strings.HasPrefix(p, "workspace/") {
 			t.Errorf("workspace doc should be excluded: %s", p)
 		}
+	}
+}
+
+func TestHandleEventRecordsGateDigest(t *testing.T) {
+	setupProject(t)
+	body := `{"type":"gate","stage":"Requirements Analysis","decision":"approve","note":"looks good"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/event", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	handleEvent(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
+	}
+	entries, _ := readDigests()
+	if len(entries) != 1 || entries[0].Type != "gate" || entries[0].Actor != "user" {
+		t.Fatalf("gate digest not recorded: %+v", entries)
+	}
+	if !strings.Contains(entries[0].Summary, "approve") || !strings.Contains(entries[0].Summary, "Requirements Analysis") {
+		t.Errorf("summary missing decision/stage: %q", entries[0].Summary)
+	}
+}
+
+func TestHandlePlansCountsCheckboxes(t *testing.T) {
+	root := setupProject(t)
+	_ = os.MkdirAll(filepath.Join(root, "inception", "plans"), 0o755)
+	plan := "# Plan\n\n- [x] step 1\n- [x] step 2\n- [ ] step 3\n"
+	_ = os.WriteFile(filepath.Join(root, "inception", "plans", "execution-plan.md"), []byte(plan), 0o644)
+	rec := httptest.NewRecorder()
+	handlePlans(rec, httptest.NewRequest(http.MethodGet, "/api/plans", nil))
+	var plans []planEntry
+	if err := json.Unmarshal(rec.Body.Bytes(), &plans); err != nil {
+		t.Fatal(err)
+	}
+	var found *planEntry
+	for i := range plans {
+		if strings.Contains(plans[i].Path, "execution-plan") {
+			found = &plans[i]
+		}
+	}
+	if found == nil {
+		t.Fatal("execution-plan not in plans output")
+	}
+	if found.Done != 2 || found.Total != 3 {
+		t.Errorf("checkbox count = %d/%d, want 2/3", found.Done, found.Total)
 	}
 }
 
