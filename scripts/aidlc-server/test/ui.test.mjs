@@ -16,8 +16,8 @@ test('renders all six workspaces with headings, no console errors', async (t) =>
   t.after(app.cleanup);
   const { page } = app;
 
-  // nav = Overview + 8 workspaces + Documents
-  assert.equal(await page.locator('nav button').count(), 10, 'overview + eight workspaces + documents');
+  // nav = Overview + 8 workspaces + Documents + Audit
+  assert.equal(await page.locator('nav button').count(), 11, 'overview + eight workspaces + documents + audit');
   for (const label of WORKSPACES) {
     await page.locator('nav button', { hasText: label }).first().click();
     await page.waitForTimeout(200);

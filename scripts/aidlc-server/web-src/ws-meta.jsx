@@ -226,5 +226,26 @@ function DocumentsWS() {
   );
 }
 
+/* ---------------- Audit view (verbatim trail) ---------------- */
+function AuditWS() {
+  const [body, setBody] = mUseState(null);
+  mUseEffect(() => {
+    fetch('/api/doc?path=' + encodeURIComponent('audit.md'))
+      .then(r => r.ok ? r.text() : null).then(setBody).catch(() => setBody(null));
+  }, []);
+  const rendered = (body && window.marked) ? window.marked.parse(body) : '';
+  return (
+    <>
+      <WorkHeader eyebrow="Audit" title="The trail"
+        desc="The verbatim, append-only audit log (aidlc-docs/audit.md) — every interaction and decision, recorded by the agent. Distinct from the Digest, which is the editable change-conversation." />
+      <div className="scroll" style={{ flex: 1, minHeight: 0, padding: '24px 32px' }}>
+        {body === null && <div className="muted" style={{ fontSize: 13.5 }}>No <code>audit.md</code> yet — it’s written as the workflow runs.</div>}
+        {body !== null && <div className="doc-md" dangerouslySetInnerHTML={{ __html: rendered }} />}
+      </div>
+    </>
+  );
+}
+
 window.OverviewWS = OverviewWS;
 window.DocumentsWS = DocumentsWS;
+window.AuditWS = AuditWS;

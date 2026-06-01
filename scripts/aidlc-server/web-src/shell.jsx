@@ -18,6 +18,7 @@ const NAV_GROUPS = [
 // meta views (read-only reflections) shown above/below the editable workspaces
 const OVERVIEW = { id: 'overview', label: 'Overview', icon: I.star, hue: 'var(--ink-soft)' };
 const DOCUMENTS = { id: 'documents', label: 'Documents', icon: I.note, hue: 'var(--ink-soft)' };
+const AUDIT = { id: 'audit', label: 'Audit', icon: I.search, hue: 'var(--ink-soft)' };
 // which aidlc-state.md stage each editable workspace corresponds to (for status dots)
 const STAGE_OF = {
   clarify: 'Requirements Analysis', stories: 'User Stories', arch: 'Application Design',
@@ -96,6 +97,7 @@ function Rail({ active, setActive, theme, setTheme, stages }) {
         ))}
         <div className="hr" style={{ margin: '4px 10px 10px' }}></div>
         <NavButton w={DOCUMENTS} active={active} setActive={setActive} />
+        <NavButton w={AUDIT} active={active} setActive={setActive} />
       </nav>
 
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -131,7 +133,7 @@ function Rail({ active, setActive, theme, setTheme, stages }) {
 }
 
 function TopBar({ active, onOpenDigest, unread }) {
-  const w = WORKSPACES.find(x => x.id === active) || (active === 'overview' ? OVERVIEW : active === 'documents' ? DOCUMENTS : { label: active });
+  const w = WORKSPACES.find(x => x.id === active) || { overview: OVERVIEW, documents: DOCUMENTS, audit: AUDIT }[active] || { label: active };
   const repo = (window.SEED && window.SEED.project && window.SEED.project.repo) || 'project';
   return (
     <div style={{ height: 54, flex: '0 0 54px', borderBottom: '1px solid var(--line)', display: 'flex',
@@ -285,7 +287,7 @@ function AppShell() {
     clarify: window.ClarifyWS, stories: window.StoriesWS, arch: window.ArchWS,
     entities: window.EntitiesWS, rules: window.RulesWS,
     infra: window.InfraWS, tests: window.TestsWS, steering: window.SteeringWS,
-    overview: window.OverviewWS, documents: window.DocumentsWS,
+    overview: window.OverviewWS, documents: window.DocumentsWS, audit: window.AuditWS,
   };
   const WS = registry[active] || (() => <div style={{ padding: 40 }} className="muted">Coming soon…</div>);
 
