@@ -3,6 +3,8 @@ const WORKSPACES = [
   { id: 'clarify', label: 'Clarification', icon: I.clarify, hue: 'var(--primary)', phase: 'Inception' },
   { id: 'stories', label: 'Stories', icon: I.stories, hue: 'var(--blue)', phase: 'Inception' },
   { id: 'arch', label: 'Architecture', icon: I.arch, hue: 'var(--violet)', phase: 'Inception' },
+  { id: 'entities', label: 'Entities', icon: I.db, hue: 'var(--violet)', phase: 'Construction' },
+  { id: 'rules', label: 'Business rules', icon: I.shield, hue: 'var(--primary)', phase: 'Construction' },
   { id: 'infra', label: 'Infrastructure', icon: I.infra, hue: 'var(--green)', phase: 'Construction' },
   { id: 'tests', label: 'Tests', icon: I.tests, hue: 'var(--amber)', phase: 'Construction' },
   { id: 'steering', label: 'Steering', icon: I.steer, hue: 'var(--teal)', phase: 'Steering' },
@@ -19,6 +21,7 @@ const DOCUMENTS = { id: 'documents', label: 'Documents', icon: I.note, hue: 'var
 // which aidlc-state.md stage each editable workspace corresponds to (for status dots)
 const STAGE_OF = {
   clarify: 'Requirements Analysis', stories: 'User Stories', arch: 'Application Design',
+  entities: 'Functional Design', rules: 'Functional Design',
   infra: 'Infrastructure Design', tests: 'Build and Test',
 };
 const STATUS_DOT = { done: 'var(--green)', skip: 'var(--ink-faint)', pending: 'var(--amber)' };
@@ -280,6 +283,7 @@ function AppShell() {
 
   const registry = {
     clarify: window.ClarifyWS, stories: window.StoriesWS, arch: window.ArchWS,
+    entities: window.EntitiesWS, rules: window.RulesWS,
     infra: window.InfraWS, tests: window.TestsWS, steering: window.SteeringWS,
     overview: window.OverviewWS, documents: window.DocumentsWS,
   };

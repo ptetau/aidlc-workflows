@@ -155,3 +155,27 @@ list, and the `readyForOperations` gate.
 `kind` ∈ `toggle | slider`. `sample` is a representative code snippet (carried through). `agents`
 holds the **AGENTS.md** content (the root steering doc) section-by-section — keep it consistent with
 the rules; it is what `AGENTS.md` is generated from. Each `agents.*` field may contain markdown.
+
+## entities.json  (Functional Design · domain entities)
+```json
+{
+  "entities": [
+    { "name": "Invoice",
+      "fields": [ { "field": "amountCents", "type": "integer", "constraints": ">= 0", "description": "Total in cents" } ],
+      "invariants": ["amountCents equals the sum of line items"] }
+  ]
+}
+```
+From `construction/{unit}/functional-design/domain-entities.md`. Typed fields (field/type/constraints/
+description) + `invariants`. FK constraints encode entity→entity relationships.
+
+## rules.json  (Functional Design · business rules)
+```json
+{
+  "groups": [
+    { "title": "Money", "rules": [ { "id": "BR-001", "text": "Money is integer cents.", "traces": ["FR-001"] } ] }
+  ]
+}
+```
+From `construction/{unit}/functional-design/business-rules.md`. BR-* rules grouped by topic; `traces`
+links each rule to the requirement id(s) (FR-*) it enforces.

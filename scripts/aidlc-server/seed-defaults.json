@@ -811,5 +811,111 @@
       "conventions": "Money in integer cents (no floats). All external calls idempotent. camelCase functions, PascalCase types.",
       "architectureDecisions": "USD-only at launch (multi-currency deferred to #1842). Aggregation uses idempotent 1h tumbling windows."
     }
+  },
+  "entities": {
+    "entities": [
+      {
+        "name": "Invoice",
+        "fields": [
+          {
+            "field": "id",
+            "type": "string (UUID)",
+            "constraints": "PK",
+            "description": "Invoice identifier"
+          },
+          {
+            "field": "customerId",
+            "type": "string",
+            "constraints": "FK → Customer",
+            "description": "Owning customer"
+          },
+          {
+            "field": "amountCents",
+            "type": "integer",
+            "constraints": ">= 0",
+            "description": "Total in integer cents"
+          },
+          {
+            "field": "status",
+            "type": "enum",
+            "constraints": "draft|issued|paid|void",
+            "description": "Lifecycle state"
+          }
+        ],
+        "invariants": [
+          "amountCents equals the sum of line items",
+          "No floats anywhere"
+        ]
+      },
+      {
+        "name": "UsageEvent",
+        "fields": [
+          {
+            "field": "id",
+            "type": "string",
+            "constraints": "unique (idempotency key)",
+            "description": "Dedupe key"
+          },
+          {
+            "field": "quantity",
+            "type": "integer",
+            "constraints": "> 0",
+            "description": "Metered quantity"
+          },
+          {
+            "field": "ts",
+            "type": "timestamp",
+            "constraints": "UTC",
+            "description": "Event time"
+          }
+        ],
+        "invariants": [
+          "Duplicate id is ignored"
+        ]
+      }
+    ]
+  },
+  "rules": {
+    "groups": [
+      {
+        "title": "Money",
+        "rules": [
+          {
+            "id": "BR-001",
+            "text": "All money is represented as integer cents; no floating point.",
+            "traces": [
+              "FR-001"
+            ]
+          },
+          {
+            "id": "BR-002",
+            "text": "Default currency is USD until the multi-currency epic lands.",
+            "traces": [
+              "FR-001"
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Reliability",
+        "rules": [
+          {
+            "id": "BR-010",
+            "text": "All external calls (payment, metering) must be idempotent.",
+            "traces": [
+              "FR-003",
+              "FR-004"
+            ]
+          },
+          {
+            "id": "BR-011",
+            "text": "Failed payments retry 3 times over 7 days, then enter dunning.",
+            "traces": [
+              "FR-003"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

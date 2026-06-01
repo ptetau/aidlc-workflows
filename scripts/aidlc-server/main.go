@@ -40,8 +40,8 @@ var assetsFS embed.FS
 //go:embed seed-defaults.json
 var seedDefaults []byte
 
-// the 7 documents that make up the workspace state, in display order
-var docs = []string{"project", "clarify", "stories", "arch", "infra", "tests", "steering"}
+// the documents that make up the workspace state, in display order
+var docs = []string{"project", "clarify", "stories", "arch", "entities", "rules", "infra", "tests", "steering"}
 
 func isDoc(name string) bool {
 	for _, d := range docs {

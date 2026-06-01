@@ -18,7 +18,8 @@ const OUT = join(here, 'assets');
 // concatenation order MUST match the old HTML: primitives → workspaces → shell → entry
 const ORDER = [
   'shared.jsx', 'ws-clarify.jsx', 'ws-stories.jsx', 'ws-architecture.jsx',
-  'ws-infra.jsx', 'ws-tests.jsx', 'ws-steering.jsx', 'ws-meta.jsx', 'shell.jsx', 'entry.jsx',
+  'ws-construction.jsx', 'ws-infra.jsx', 'ws-tests.jsx', 'ws-steering.jsx',
+  'ws-meta.jsx', 'shell.jsx', 'entry.jsx',
 ];
 
 async function main() {

@@ -38,6 +38,10 @@ func renderMarkdown(docType string, data any) (string, error) {
 		renderTests(&b, asMap(data))
 	case "steering":
 		renderSteering(&b, asMap(data))
+	case "entities":
+		renderEntities(&b, asMap(data))
+	case "rules":
+		renderRules(&b, asMap(data))
 	default:
 		return "", fmt.Errorf("unknown doc type %q", docType)
 	}
@@ -388,6 +392,46 @@ func renderSteering(b *strings.Builder, m map[string]any) {
 				fmt.Fprintf(b, "### %s\n\n%s\n\n", kv[1], v)
 			}
 		}
+	}
+}
+
+func renderEntities(b *strings.Builder, m map[string]any) {
+	b.WriteString("# Domain entities\n\n")
+	for _, e := range asSlice(m["entities"]) {
+		em := asMap(e)
+		fmt.Fprintf(b, "## %s\n\n", str(em["name"]))
+		if fields := asSlice(em["fields"]); len(fields) > 0 {
+			b.WriteString("| Field | Type | Constraints | Description |\n|---|---|---|---|\n")
+			for _, f := range fields {
+				fm := asMap(f)
+				fmt.Fprintf(b, "| %s | %s | %s | %s |\n", str(fm["field"]), str(fm["type"]), str(fm["constraints"]), str(fm["description"]))
+			}
+			b.WriteString("\n")
+		}
+		if inv := asSlice(em["invariants"]); len(inv) > 0 {
+			b.WriteString("**Invariants:**\n")
+			for _, iv := range inv {
+				fmt.Fprintf(b, "- %s\n", str(iv))
+			}
+			b.WriteString("\n")
+		}
+	}
+}
+
+func renderRules(b *strings.Builder, m map[string]any) {
+	b.WriteString("# Business rules\n\n")
+	for _, g := range asSlice(m["groups"]) {
+		gm := asMap(g)
+		fmt.Fprintf(b, "## %s\n\n", str(gm["title"]))
+		for _, r := range asSlice(gm["rules"]) {
+			rm := asMap(r)
+			traces := ""
+			if tr := asSlice(rm["traces"]); len(tr) > 0 {
+				traces = " _(traces: " + joinAny(tr) + ")_"
+			}
+			fmt.Fprintf(b, "- **%s**: %s%s\n", str(rm["id"]), str(rm["text"]), traces)
+		}
+		b.WriteString("\n")
 	}
 }
 

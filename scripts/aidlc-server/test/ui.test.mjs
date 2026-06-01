@@ -8,7 +8,7 @@ import { openApp, closeBrowser, readWorkspaceDoc, readDigests, appendAgentDigest
 
 after(closeBrowser);
 
-const WORKSPACES = ['Clarification', 'Stories', 'Architecture', 'Infrastructure', 'Tests', 'Steering'];
+const WORKSPACES = ['Clarification', 'Stories', 'Architecture', 'Entities', 'Business rules', 'Infrastructure', 'Tests', 'Steering'];
 const POLL_WAIT = 3600; // digest panel polls every 3s
 
 test('renders all six workspaces with headings, no console errors', async (t) => {
@@ -16,8 +16,8 @@ test('renders all six workspaces with headings, no console errors', async (t) =>
   t.after(app.cleanup);
   const { page } = app;
 
-  // nav = Overview + 6 workspaces + Documents
-  assert.equal(await page.locator('nav button').count(), 8, 'overview + six workspaces + documents');
+  // nav = Overview + 8 workspaces + Documents
+  assert.equal(await page.locator('nav button').count(), 10, 'overview + eight workspaces + documents');
   for (const label of WORKSPACES) {
     await page.locator('nav button', { hasText: label }).first().click();
     await page.waitForTimeout(200);
@@ -221,6 +221,32 @@ test('stories Personas + Map tabs: edit persona, toggle RBAC, persist', async (t
   await page.waitForSelector('.toast', { timeout: 4000 });
   const sd = readWorkspaceDoc(ws, 'stories');
   assert.deepEqual(sd.cards[0].roles, ['admin'], 'RBAC role persisted');
+  assert.deepEqual(page.__errors, []);
+});
+
+test('entities + business-rules workspaces: edit + persist', async (t) => {
+  const app = await openApp({
+    project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },
+    entities: { entities: [{ name: 'Invoice', fields: [{ field: 'id', type: 'string', constraints: 'PK', description: 'id' }], invariants: ['x'] }] },
+    rules: { groups: [{ title: 'Money', rules: [{ id: 'BR-001', text: 'integer cents', traces: ['FR-001'] }] }] },
+  });
+  t.after(app.cleanup);
+  const { page, ws } = app;
+
+  // Entities
+  await page.locator('nav button', { hasText: 'Entities' }).first().click();
+  await page.waitForTimeout(300);
+  assert.ok(await page.getByText('Invoice').first().isVisible(), 'entity shown');
+  await page.locator('nav button', { hasText: 'Business rules' }).first().click();
+  await page.waitForTimeout(300);
+  assert.ok(await page.getByText('Encode the rules').first().isVisible(), 'rules view shown');
+  // edit a rule text and save
+  const rt = page.getByPlaceholder('The system must…').first();
+  await rt.fill('All money is integer cents.');
+  await page.getByRole('button', { name: /^Save$/ }).first().click();
+  await page.waitForSelector('.toast', { timeout: 4000 });
+  const rd = readWorkspaceDoc(ws, 'rules');
+  assert.equal(rd.groups[0].rules[0].text, 'All money is integer cents.', 'rule persisted');
   assert.deepEqual(page.__errors, []);
 });
 
