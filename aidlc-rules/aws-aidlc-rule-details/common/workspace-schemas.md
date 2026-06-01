@@ -84,12 +84,21 @@ references `epics[].id`. There is **no** sprint board / column model.
 ```json
 {
   "nodes": [ { "id": "gw", "type": "api", "label": "API Gateway", "x": 80, "y": 70,
-               "fields": [["route", "/v1/usage"], ["auth", "mTLS"]] } ],
-  "edges": [ { "from": "gw", "to": "meter" } ]
+               "fields": [["route", "/v1/usage"], ["auth", "mTLS"]],
+               "methods": [ { "name": "ingest", "input": "UsageEvent[]", "output": "Ack", "purpose": "accept events" } ] } ],
+  "edges": [ { "from": "gw", "to": "meter" } ],
+  "units": [
+    { "id": "u1", "name": "Usage Aggregation", "responsibilities": "Ingest & aggregate usage",
+      "workload": "service", "datastore": "Postgres", "port": "8081", "buildOrder": 1,
+      "components": ["gw", "meter", "agg"], "stories": ["US-AGG-001", "US-AGG-002"] }
+  ]
 }
 ```
 `type` ∈ `api | db | ui | queue`. `x`/`y` are canvas pixel coords. `fields` is an array of
-`[key, value]` pairs (node schema/config). `edges` connect node ids (data flow).
+`[key, value]` pairs (node config). `methods` are typed component methods (name/input/output/purpose).
+`edges` connect node ids (data flow). `units` are deployable units of work: each groups `components`
+(node ids), owns a `buildOrder` + deployment profile (`workload`/`datastore`/`port`), and lists the
+story ids it delivers (`stories` — the **story→unit map**).
 
 ## infra.json
 ```json

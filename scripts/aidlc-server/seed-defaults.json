@@ -377,7 +377,8 @@
             "auth",
             "mTLS"
           ]
-        ]
+        ],
+        "methods": []
       },
       {
         "id": "meter",
@@ -394,7 +395,8 @@
             "retention",
             "7d"
           ]
-        ]
+        ],
+        "methods": []
       },
       {
         "id": "agg",
@@ -411,6 +413,14 @@
             "idempotent",
             "true"
           ]
+        ],
+        "methods": [
+          {
+            "name": "aggregate",
+            "input": "UsageEvent[]",
+            "output": "BillableUnit",
+            "purpose": "Sum events per cycle, idempotent"
+          }
         ]
       },
       {
@@ -428,7 +438,8 @@
             "pool",
             "20"
           ]
-        ]
+        ],
+        "methods": []
       },
       {
         "id": "inv",
@@ -445,6 +456,14 @@
             "idempotent",
             "true"
           ]
+        ],
+        "methods": [
+          {
+            "name": "generateInvoice",
+            "input": "Cycle",
+            "output": "Invoice",
+            "purpose": "Build draft invoice with line items"
+          }
         ]
       },
       {
@@ -462,7 +481,8 @@
             "ssr",
             "true"
           ]
-        ]
+        ],
+        "methods": []
       }
     ],
     "edges": [
@@ -489,6 +509,59 @@
       {
         "from": "db",
         "to": "web"
+      }
+    ],
+    "units": [
+      {
+        "id": "u1",
+        "name": "Usage Aggregation",
+        "responsibilities": "Ingest and aggregate usage events into billable units",
+        "workload": "service",
+        "datastore": "Postgres",
+        "port": "8081",
+        "buildOrder": 1,
+        "components": [
+          "gw",
+          "meter",
+          "agg"
+        ],
+        "stories": [
+          "US-AGG-001",
+          "US-AGG-002"
+        ]
+      },
+      {
+        "id": "u2",
+        "name": "Invoicing & Payment",
+        "responsibilities": "Generate invoices at cycle close and retry payments",
+        "workload": "service",
+        "datastore": "Postgres",
+        "port": "8082",
+        "buildOrder": 2,
+        "components": [
+          "db",
+          "inv"
+        ],
+        "stories": [
+          "US-INV-001",
+          "US-INV-002",
+          "US-PAY-001"
+        ]
+      },
+      {
+        "id": "u3",
+        "name": "Customer Portal",
+        "responsibilities": "Self-serve invoices and payment methods",
+        "workload": "web",
+        "datastore": "-",
+        "port": "3000",
+        "buildOrder": 3,
+        "components": [
+          "web"
+        ],
+        "stories": [
+          "US-PAY-001"
+        ]
       }
     ]
   },

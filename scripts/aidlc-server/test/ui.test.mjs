@@ -224,6 +224,32 @@ test('stories Personas + Map tabs: edit persona, toggle RBAC, persist', async (t
   assert.deepEqual(page.__errors, []);
 });
 
+test('arch Units tab: edit a unit + story map, persist; methods on a node', async (t) => {
+  const app = await openApp({
+    project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },
+    arch: {
+      nodes: [{ id: 'api', type: 'api', label: 'API', x: 80, y: 70, fields: [], methods: [] }],
+      edges: [],
+      units: [{ id: 'u1', name: 'Core', responsibilities: '', workload: 'service', datastore: 'pg', port: '8080', buildOrder: 1, components: ['api'], stories: ['US-001'] }],
+    },
+  });
+  t.after(app.cleanup);
+  const { page, ws } = app;
+  await page.locator('nav button', { hasText: 'Architecture' }).first().click();
+  await page.waitForTimeout(200);
+  await page.getByRole('button', { name: 'Units' }).first().click();
+  await page.waitForTimeout(300);
+  assert.ok(await page.getByText('Units of work').first().isVisible(), 'units view shown');
+  // edit the stories map and save → persists
+  const storiesInput = page.getByPlaceholder('US-AGG-001, US-AGG-002').first();
+  await storiesInput.fill('US-001, US-002');
+  await page.getByRole('button', { name: /^Save$/ }).first().click();
+  await page.waitForSelector('.toast', { timeout: 4000 });
+  const a = readWorkspaceDoc(ws, 'arch');
+  assert.deepEqual(a.units[0].stories, ['US-001', 'US-002'], 'story→unit map persisted');
+  assert.deepEqual(page.__errors, []);
+});
+
 test('clarify Requirements tab: FR/NFR/decisions/scope edit + persist', async (t) => {
   const app = await openApp({
     project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },

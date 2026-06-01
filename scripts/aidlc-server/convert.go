@@ -248,12 +248,37 @@ func renderArch(b *strings.Builder, m map[string]any) {
 				fmt.Fprintf(b, "  - %s: %s\n", str(pair[0]), str(pair[1]))
 			}
 		}
+		for _, mth := range asSlice(nm["methods"]) {
+			mm := asMap(mth)
+			fmt.Fprintf(b, "  - `%s(%s) → %s` — %s\n", str(mm["name"]), str(mm["input"]), str(mm["output"]), str(mm["purpose"]))
+		}
 	}
 	b.WriteString("\n## Edges\n\n")
 	for _, e := range asSlice(m["edges"]) {
 		em := asMap(e)
 		fmt.Fprintf(b, "- %s → %s\n", str(em["from"]), str(em["to"]))
 	}
+	if us := asSlice(m["units"]); len(us) > 0 {
+		b.WriteString("\n## Units of work (build order)\n\n")
+		for _, u := range us {
+			um := asMap(u)
+			fmt.Fprintf(b, "### #%s %s\n\n", trimNum(num(um["buildOrder"])), str(um["name"]))
+			if r := str(um["responsibilities"]); r != "" {
+				fmt.Fprintf(b, "%s\n\n", r)
+			}
+			fmt.Fprintf(b, "- workload: %s · data store: %s · port: %s\n", str(um["workload"]), str(um["datastore"]), str(um["port"]))
+			fmt.Fprintf(b, "- components: %s\n", joinAny(asSlice(um["components"])))
+			fmt.Fprintf(b, "- stories: %s\n\n", joinAny(asSlice(um["stories"])))
+		}
+	}
+}
+
+func joinAny(items []any) string {
+	parts := make([]string, len(items))
+	for i, it := range items {
+		parts[i] = str(it)
+	}
+	return strings.Join(parts, ", ")
 }
 
 func renderInfra(b *strings.Builder, m map[string]any) {

@@ -20,6 +20,8 @@ function ArchWS() {
   const [zoom, setZoom] = aUseState(1);
   const [sel, setSel] = aUseState(null);
   const [conn, setConn] = aUseState(null); // {from, x, y} live connection
+  const [tab, setTab] = aUseState('topology'); // topology | units
+  const [units, setUnits] = aUseState(() => seed.units || []);
   const wrapRef = aUseRef(null);
   const drag = aUseRef(null);
 
@@ -91,20 +93,29 @@ function ArchWS() {
 
   // editable state in SEED shape — persisted to workspace/arch.json
   const buildState = () => ({
-    nodes: nodes.map(n => ({ id: n.id, type: n.type, label: n.label, x: Math.round(n.x), y: Math.round(n.y), fields: n.fields })),
+    nodes: nodes.map(n => ({ id: n.id, type: n.type, label: n.label, x: Math.round(n.x), y: Math.round(n.y), fields: n.fields, methods: n.methods || [] })),
     edges: edges.map(e => ({ from: e.from, to: e.to })),
+    units,
   });
 
   return (
     <>
-      <WorkHeader eyebrow="Architecture Topology Canvas" title="Map the system"
-        desc="Drag nodes to lay out the system. Drag from a node's right port onto another to define data flow. Click a node to edit its schema."
+      <WorkHeader eyebrow={tab === 'topology' ? 'Architecture Topology Canvas' : 'Units of Work'}
+        title={tab === 'topology' ? 'Map the system' : 'Decompose into units'}
+        desc={tab === 'topology'
+          ? 'Drag nodes to lay out the system. Drag from a node’s right port onto another to define data flow. Click a node to edit its schema and methods.'
+          : 'Deployable units of work: each groups components, owns a build order and deployment profile, and maps to the stories it delivers.'}
         right={<>
-          <span className="pill pill-neutral">{nodes.length} nodes · {edges.length} edges</span>
+          <Segmented options={[{ value: 'topology', label: 'Topology' }, { value: 'units', label: 'Units' }]} value={tab} onChange={setTab} />
+          {tab === 'topology'
+            ? <span className="pill pill-neutral">{nodes.length} nodes · {edges.length} edges</span>
+            : <span className="pill pill-neutral">{units.length} units</span>}
           <Btn kind="primary" icon={I.check} onClick={() => save('arch', buildState())}>Save</Btn>
         </>} />
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      {tab === 'units' && <ArchUnits units={units} setUnits={setUnits} nodes={nodes} />}
+
+      <div style={{ flex: 1, minHeight: 0, display: tab === 'topology' ? 'flex' : 'none' }}>
         {/* canvas */}
         <div ref={wrapRef} onPointerDown={startPan} style={{
           flex: 1, minWidth: 0, position: 'relative', overflow: 'hidden', cursor: drag.current?.type === 'pan' ? 'grabbing' : 'default',
@@ -243,6 +254,95 @@ function NodeInspector({ node, onChange, onDelete }) {
               <span style={{ width: 12, height: 12, display: 'flex' }}>{I.x}</span></button>
           </div>
         ))}
+      </div>
+
+      {/* component methods (typed I/O) */}
+      <div style={{ display: 'flex', alignItems: 'center', margin: '18px 0 8px' }}>
+        <span className="eyebrow">Methods</span>
+        <button onClick={() => onChange({ methods: [...(node.methods || []), { name: '', input: '', output: '', purpose: '' }] })} className="mono"
+          style={{ marginLeft: 'auto', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--primary)', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ width: 12, height: 12, display: 'flex' }}>{I.plus}</span>add</button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {(node.methods || []).length === 0 && <div className="muted mono" style={{ fontSize: 11, padding: '4px 0' }}>No methods yet.</div>}
+        {(node.methods || []).map((mth, i) => {
+          const setM = patch => onChange({ methods: node.methods.map((x, j) => j === i ? { ...x, ...patch } : x) });
+          return (
+            <div key={i} className="card" style={{ padding: 9, boxShadow: 'none', display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input className="input mono" value={mth.name} placeholder="methodName" onChange={e => setM({ name: e.target.value })} style={{ fontSize: 11, padding: '6px 8px', fontWeight: 600 }} />
+                <button onClick={() => onChange({ methods: node.methods.filter((_, j) => j !== i) })} style={{ flex: '0 0 20px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-faint)' }}>
+                  <span style={{ width: 12, height: 12, display: 'flex' }}>{I.x}</span></button>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input className="input mono" value={mth.input} placeholder="input" onChange={e => setM({ input: e.target.value })} style={{ fontSize: 10.5, padding: '6px 8px' }} />
+                <span className="mono" style={{ color: 'var(--ink-faint)', alignSelf: 'center' }}>→</span>
+                <input className="input mono" value={mth.output} placeholder="output" onChange={e => setM({ output: e.target.value })} style={{ fontSize: 10.5, padding: '6px 8px' }} />
+              </div>
+              <input className="input" value={mth.purpose} placeholder="purpose" onChange={e => setM({ purpose: e.target.value })} style={{ fontSize: 11.5, padding: '6px 8px' }} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---- Units of Work tab ---- */
+function ArchUnits({ units, setUnits, nodes }) {
+  const upd = (i, patch) => setUnits(units.map((u, j) => j === i ? { ...u, ...patch } : u));
+  const add = () => setUnits([...units, { id: 'u' + Date.now(), name: 'New unit', responsibilities: '', workload: '', datastore: '', port: '', buildOrder: units.length + 1, components: [], stories: [] }]);
+  const fs = { fontSize: 12, padding: '7px 9px' };
+  return (
+    <div className="scroll fadein" style={{ flex: 1, minHeight: 0, padding: '18px 28px 28px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12, maxWidth: 1000 }}>
+        <span className="eyebrow">Units of work · build order</span>
+        <Btn kind="soft" sm icon={I.plus} onClick={add} style={{ marginLeft: 'auto' }}>Add unit</Btn>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 1000 }}>
+        {units.length === 0 && <div className="muted" style={{ fontSize: 13 }}>No units yet — group components into deployable units of work.</div>}
+        {[...units].sort((a, b) => (a.buildOrder || 0) - (b.buildOrder || 0)).map((u) => {
+          const i = units.indexOf(u);
+          return (
+            <div key={u.id || i} className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span className="mono" title="build order" style={{ flex: '0 0 34px', height: 30, borderRadius: 8, background: 'var(--surface-3)', color: 'var(--ink-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12 }}>#{u.buildOrder || '?'}</span>
+                <input className="input serif" value={u.name} onChange={e => upd(i, { name: e.target.value })} style={{ fontSize: 15, fontWeight: 500 }} />
+                <input className="input mono" type="number" value={u.buildOrder || 0} title="build order" onChange={e => upd(i, { buildOrder: +e.target.value })} style={{ ...fs, flex: '0 0 70px' }} />
+                <button onClick={() => setUnits(units.filter((_, j) => j !== i))} style={{ flex: '0 0 24px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-faint)' }}>
+                  <span style={{ width: 13, height: 13, display: 'flex' }}>{I.x}</span></button>
+              </div>
+              <textarea className="textarea" rows={2} value={u.responsibilities || ''} placeholder="Responsibilities…" onChange={e => upd(i, { responsibilities: e.target.value })} style={fs} />
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <input className="input mono" value={u.workload || ''} placeholder="workload (e.g. service)" onChange={e => upd(i, { workload: e.target.value })} style={{ ...fs, flex: 1, minWidth: 130 }} />
+                <input className="input mono" value={u.datastore || ''} placeholder="data store" onChange={e => upd(i, { datastore: e.target.value })} style={{ ...fs, flex: 1, minWidth: 130 }} />
+                <input className="input mono" value={u.port || ''} placeholder="port" onChange={e => upd(i, { port: e.target.value })} style={{ ...fs, flex: '0 0 90px' }} />
+              </div>
+              {/* component membership */}
+              <div>
+                <div className="eyebrow" style={{ marginBottom: 6 }}>Components</div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {nodes.length === 0 && <span className="muted" style={{ fontSize: 12 }}>No components on the canvas yet.</span>}
+                  {nodes.map(n => {
+                    const on = (u.components || []).includes(n.id);
+                    return (
+                      <button key={n.id} onClick={() => upd(i, { components: on ? (u.components || []).filter(x => x !== n.id) : [...(u.components || []), n.id] })}
+                        className="mono" style={{ border: `1px solid ${on ? 'var(--violet)' : 'var(--line-2)'}`, cursor: 'pointer',
+                          background: on ? 'rgba(130,104,201,.12)' : 'var(--surface)', color: on ? 'var(--violet)' : 'var(--ink-soft)',
+                          borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 600 }}>{n.label}</button>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* story map */}
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span className="eyebrow">Stories delivered (ids, comma-separated)</span>
+                <input className="input mono" value={(u.stories || []).join(', ')} placeholder="US-AGG-001, US-AGG-002"
+                  onChange={e => upd(i, { stories: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} style={{ fontSize: 11.5, padding: '7px 9px' }} />
+              </label>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
