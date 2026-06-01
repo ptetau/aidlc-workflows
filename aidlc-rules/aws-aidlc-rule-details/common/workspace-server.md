@@ -8,6 +8,10 @@ as a digest. Running `/aidlc ingest` lets you (the agent) react to those edits â
 This is the **html-mode** editor for the six covered documents. It does not replace the markdown
 workflow for the other artifacts; see `html-artifacts.md`.
 
+**Adopting an existing markdown project?** If the project already has markdown artifacts but no
+`workspace/*.json`, run `/aidlc adopt` first to convert them (see `adopt-markdown.md`); then launch
+the server.
+
 ## The six covered documents
 
 | Workspace | JSON file | Source AI-DLC artifact(s) |
