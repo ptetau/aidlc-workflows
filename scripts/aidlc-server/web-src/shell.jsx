@@ -213,7 +213,8 @@ function AppShell() {
   const [theme, setTheme] = useTheme();
   const [digests, setDigests] = useState([]);
   const [digestOpen, setDigestOpen] = useState(false);
-  const [seen, setSeen] = useState(() => +(localStorage.getItem('aidlc-digest-seen') || 0));
+  // unread tracks new AGENT replies (ingest acks) only — a user's own Save shouldn't badge them
+  const [seenAgent, setSeenAgent] = useState(() => +(localStorage.getItem('aidlc-digest-seen-agent') || 0));
   useEffect(() => { localStorage.setItem('aidlc-ws', active); }, [active]);
 
   // poll the digest ledger; also refresh immediately after a local Save
@@ -228,9 +229,10 @@ function AppShell() {
     return () => { alive = false; clearInterval(iv); window.removeEventListener('aidlc-saved', onSaved); };
   }, []);
 
-  // unread = entries beyond what was shown when the drawer was last open
-  const unread = Math.max(0, digests.length - seen);
-  const openDigest = () => { setDigestOpen(true); setSeen(digests.length); localStorage.setItem('aidlc-digest-seen', String(digests.length)); };
+  // unread = agent replies appended since the drawer was last opened
+  const agentCount = digests.filter(d => d.actor === 'agent').length;
+  const unread = Math.max(0, agentCount - seenAgent);
+  const openDigest = () => { setDigestOpen(true); setSeenAgent(agentCount); localStorage.setItem('aidlc-digest-seen-agent', String(agentCount)); };
 
   const registry = {
     clarify: window.ClarifyWS, stories: window.StoriesWS, arch: window.ArchWS,

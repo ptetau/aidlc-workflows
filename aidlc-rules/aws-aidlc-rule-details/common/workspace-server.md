@@ -62,7 +62,8 @@ aidlc-docs/workspace/
 
 - **Save** in any workspace POSTs the full document (in its JSON schema shape) to the server, which
   writes `aidlc-docs/workspace/<doc>.json` atomically and appends a `user` entry to
-  `digests.ndjson` describing which top-level fields changed (plus any note the user typed).
+  `digests.ndjson` summarizing which top-level fields changed (auto-derived from the diff). The
+  save API also accepts an optional `note` used as the summary when present.
 - The browser's Digest panel polls the server, so when you append an `agent` entry during ingest it
   appears in the UI automatically (~3s) with no reload.
 
