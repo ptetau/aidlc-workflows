@@ -13,8 +13,15 @@ backfill for projects that predate the workspace.
 
 - An `aidlc-docs/` directory with at least one covered markdown artifact exists. If there are none,
   there is nothing to adopt — tell the user to run the normal `/aidlc` workflow instead.
-- This is **agent work, not a script**: prose markdown → structured JSON requires interpretation.
-  Read each source artifact and synthesize the JSON; do not pattern-match blindly.
+- **Deterministic path first.** If a source `.md` already carries an `<!-- aidlc:<doc> … -->` data
+  block (i.e. it was produced by `/aidlc export`), do NOT interpret it — convert losslessly with the
+  built-in importer, which guarantees an exact round-trip:
+  ```
+  <server-dir>/aidlc-server import -md <dir-of-md> -docs aidlc-docs/workspace
+  ```
+- **Interpretive path (legacy prose).** Only for free-form markdown with no data block: this is
+  **agent work, not a script** — prose → structured JSON requires interpretation. Read each source
+  artifact and synthesize the JSON; do not pattern-match blindly.
 
 ## Steps
 

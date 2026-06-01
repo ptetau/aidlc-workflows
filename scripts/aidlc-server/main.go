@@ -56,6 +56,14 @@ var (
 )
 
 func main() {
+	// converter subcommands (run and exit, before server flag parsing)
+	if len(os.Args) > 1 && (os.Args[1] == "export" || os.Args[1] == "import") {
+		if err := runConvert(os.Args[1], os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
 	port := flag.Int("port", 7421, "port to listen on (localhost only)")
 	docsFlag := flag.String("docs", "", "path to aidlc-docs/workspace (default: ./aidlc-docs/workspace)")
 	noOpen := flag.Bool("no-open", false, "do not auto-open the browser")

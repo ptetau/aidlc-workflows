@@ -5,6 +5,10 @@ Two suites:
 - **`../main_test.go`** — Go server tests (httptest): seeding, `/api/state`, `/api/save`
   (atomic write + field diff + digest ledger), `/api/digests`, `diffDocs`, `compactVal`,
   validation/error paths, NDJSON round-trip. No browser needed.
+- **`../convert_test.go`** — JSON↔markdown converter (`/aidlc export` ↔ `/aidlc adopt`): asserts
+  `JSON → md → JSON` is identity for every seeded doc plus edge cases (empty collections, unicode,
+  multi-line Gherkin, slider rules, text answers), markdown idempotency, and that exported markdown
+  is human-readable with a hidden canonical data block. No browser needed.
 - **`ui.test.mjs`** — Playwright UI tests (`node:test` + `playwright-core`): renders all six
   workspaces, dark mode, offline fonts, copy-to-json removed / Save present, Save→digest
   round-trip, agent-ingest reply auto-appearing via polling, the agent-only unread badge, and
