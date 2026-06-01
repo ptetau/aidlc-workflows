@@ -258,13 +258,19 @@ h4.section-heading,h5.section-heading,h6.section-heading{
 .section-body{
   display:block;margin-left:70px;width:calc(100% - 70px);
   background:var(--surface);border:1px solid var(--rule);
-  padding:10px 14px;overflow:hidden;resize:none;
+  padding:8px 12px;overflow:hidden;resize:none;
   font-family:"IBM Plex Mono",monospace;font-size:var(--fs-mono);
   line-height:1.65;color:var(--ink);outline:none;
-  min-height:44px;transition:border-color .12s,background .12s;
+  min-height:28px;transition:border-color .12s,background .12s;
 }
 .section-body:focus{border-color:var(--accent)}
 .section-body.modified{border-color:var(--accent);background:var(--selected)}
+/* empty sections: dashed border, dimmed, single-line until focused */
+.section-body[data-empty="true"]{
+  border-style:dashed;opacity:.5;min-height:28px;
+}
+.section-body[data-empty="true"]:focus{opacity:1;border-style:solid}
+.section-body::placeholder{color:var(--ink-3);font-style:italic}
 
 /* ── STATUS BAR ─────────────────────────────────────────────────────────── */
 .statusbar{
@@ -399,11 +405,17 @@ JS = r"""
   var SECTIONS = __SECTIONS_JSON__;
   var state    = {};
 
-  // auto-size all textareas on load
-  document.querySelectorAll('.section-body').forEach(function(ta) {
-    ta.style.height = 'auto';
-    ta.style.height = ta.scrollHeight + 'px';
-  });
+  // auto-size all textareas; run twice — once now, once after fonts load
+  function resizeAll() {
+    document.querySelectorAll('.section-body').forEach(function(ta) {
+      ta.style.height = 'auto';
+      ta.style.height = (ta.scrollHeight || ta.offsetHeight) + 'px';
+    });
+  }
+  resizeAll();
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(resizeAll);
+  }
 
   // track edits
   document.querySelectorAll('.section-body').forEach(function(ta) {
@@ -630,7 +642,10 @@ __SECTIONS_HTML__
 
 def render_section(i, total, s):
     body_esc = attr_esc(s["body"])
-    rows = max(3, s["body"].count("\n") + 2)
+    empty = s["body"].strip() == ""
+    # 1 row for empty/short sections; let JS auto-resize expand everything else
+    rows = 1 if empty else max(2, s["body"].count("\n") + 1)
+    placeholder = " data-empty=\"true\" placeholder=\"(empty — click to add content)\"" if empty else ""
 
     if s["heading"]:
         htag = f"h{min(s['level'], 6)}"
@@ -649,7 +664,7 @@ def render_section(i, total, s):
         f'    </header>\n'
         f'    <textarea class="section-body"'
         f' data-id="{s["id"]}" data-original="{body_esc}"'
-        f' rows="{rows}">{body_esc}</textarea>\n'
+        f' rows="{rows}"{placeholder}>{body_esc}</textarea>\n'
         f'  </article>\n'
     )
 
