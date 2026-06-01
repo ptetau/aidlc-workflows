@@ -12,10 +12,25 @@ Before generating any HTML, check `aidlc-docs/aidlc-state.md` for:
 - If `html` (or the field is absent): generate HTML companions as described below.
 - If `markdown`: **skip HTML generation entirely** for this project.
 
-## MANDATORY: Write an HTML companion for every .md artifact
+## Two HTML surfaces in html mode
 
-After writing **any** `.md` file under `aidlc-docs/`, immediately generate a
-companion `.html` file alongside it by running:
+In `html` mode there are two viewers, split by document:
+
+1. **The workspace server** (`/aidlc workspace`) is the rich, editable viewer for the **six covered
+   documents** — clarification, stories, architecture, infrastructure, tests, steering. Their
+   canonical state is JSON under `aidlc-docs/workspace/` (see `workspace-server.md` and
+   `workspace-schemas.md`), edited in the browser and round-tripped via `/aidlc ingest`. **Do not**
+   generate `md_to_aidlc_html.py` companions for these six.
+2. **`md_to_aidlc_html.py`** (below) is the read/light-edit viewer for **all other** markdown
+   artifacts (reverse-engineering, functional-design, nfr-*, plans, code summaries, etc.).
+
+**The workflow is identical in both modes** — all stages, interviews, gates, and `.md` writes run
+the same. Mode only changes whether/how an HTML surface is produced.
+
+## Write an HTML companion for every other .md artifact
+
+After writing any `.md` file under `aidlc-docs/` **that is not one of the six workspace-covered
+documents**, immediately generate a companion `.html` file alongside it by running:
 
 ```
 python <script-path>/md_to_aidlc_html.py  <path-to-artifact.md>

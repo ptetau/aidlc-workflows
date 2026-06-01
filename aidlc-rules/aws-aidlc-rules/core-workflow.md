@@ -26,6 +26,8 @@ All subsequent rule detail file references (e.g., `common/process-overview.md`, 
 - Load `common/question-format-guide.md` for question formatting rules
 - Load `common/html-artifacts.md` for HTML companion generation rules
 - Load `common/agents-md.md` for AGENTS.md generation rules
+- Load `common/workspace-server.md` + `common/workspace-schemas.md` (html mode: the six covered docs are canonical JSON, edited via the workspace server)
+- Load `common/ingest.md` for the `/aidlc ingest` react-to-edits protocol
 - Reference these throughout the workflow execution
 
 ## MANDATORY: Extensions Loading (Context-Optimized)
@@ -67,6 +69,12 @@ After writing any `.md` artifact under `aidlc-docs/`, read `common/html-artifact
 1. Checks `Documentation Format` in `aidlc-docs/aidlc-state.md` — **skip HTML entirely if `markdown`**
 2. If `html`, runs the converter and writes the companion `.html` alongside the `.md`
 3. Never generates HTML for `audit.md` or `aidlc-state.md`
+
+In `html` mode, the **six covered documents** (clarification, stories, architecture, infrastructure,
+tests, steering) are additionally written as canonical JSON under `aidlc-docs/workspace/` and edited
+via the workspace server (`/aidlc workspace`) — see `common/workspace-server.md` /
+`common/workspace-schemas.md`. Do **not** generate `md_to_aidlc_html.py` companions for those six;
+the server is their viewer. User edits are reconciled back via `/aidlc ingest` (`common/ingest.md`).
 
 ## MANDATORY: Interview Format (quiz-style)
 **CRITICAL**: When you need any content/clarification from the user at any phase, you MUST gather it by **interviewing the user inline, one quiz-style question card per turn** — NOT by creating `{phase}-questions.md` files and waiting for `[Answer]:` tags. This applies to every stage.
@@ -545,6 +553,10 @@ The Operations stage will eventually include:
 │   │   │   └── code/               # Markdown summaries only
 │   │   └── build-and-test/
 │   ├── operations/                 # 🟡 OPERATIONS PHASE (placeholder)
+│   ├── workspace/                  # 🌐 html mode: canonical JSON for the 6 covered docs
+│   │   ├── project.json clarify.json stories.json arch.json infra.json tests.json steering.json
+│   │   ├── digests.ndjson          # change-conversation ledger (user edits + agent ingest replies)
+│   │   └── .snapshot/              # last-ingested baseline (for /aidlc ingest diffs)
 │   ├── aidlc-state.md
 │   └── audit.md
 ```

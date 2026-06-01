@@ -1,0 +1,13 @@
+{
+  "name": "aidlc-server-ui",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Build pipeline for the AI-DLC Workspace web UI (compiled + embedded into the Go binary).",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0"
+  }
+}

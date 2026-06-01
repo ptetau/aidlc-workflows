@@ -1,0 +1,110 @@
+# Workspace JSON Schemas
+
+These are the canonical JSON shapes for the six documents the workspace server renders
+(`aidlc-docs/workspace/<doc>.json`). When you generate or regenerate a covered document in
+**html mode**, write conforming JSON here — this JSON is the source of truth, not the `.md`.
+Match the shapes exactly; the UI is coupled to them.
+
+All files are pretty-printed JSON (2-space). The server seeds defaults for any missing file.
+
+---
+
+## project.json
+```json
+{ "name": "billing-service", "repo": "acme/billing-service", "branch": "main", "version": "v3" }
+```
+
+## clarify.json
+The requirement prose is **split into segments**; segments that are ambiguous carry an `amb` id
+that links to a question. Answering a question turns its highlighted phrase green in the UI.
+```json
+{
+  "requirement": [
+    { "t": "Build a usage-based billing service that charges customers " },
+    { "amb": "q-cadence", "t": "at the end of each cycle" },
+    { "t": ". Customers can view invoices…" }
+  ],
+  "questions": [
+    { "id": "q-cadence", "n": "Q1", "topic": "Billing cadence",
+      "text": "What defines \"the end of each cycle\"?",
+      "kind": "radio",                                  // radio | multi | text
+      "options": ["Calendar month, UTC midnight", "Per-customer anniversary"],
+      "answer": 0,                                       // radio: index|null · multi: [idx] · text: string
+      "suggest": { "label": "config/billing.yaml › cycle", "value": "Calendar month, UTC midnight" } }
+  ],
+  "notes": [ { "id": "n1", "kind": "CONSTRAINT", "text": "All money math in integer cents." } ]
+}
+```
+Generation: keep `requirement` segments concatenating to the exact requirement text. Every `amb`
+id must have a matching question `id`. `kind` drives the input; set `answer` to the resolved value
+(or null/empty if unresolved). `suggest` is optional (a recommended value from elsewhere).
+
+## stories.json
+```json
+{
+  "intent": "One-sentence business intent.",
+  "columns": ["Backlog", "This Sprint", "In Progress", "Done"],
+  "epics": [ { "id": "e1", "title": "Usage aggregation", "color": "var(--blue)" } ],
+  "cards": [
+    { "id": "s1", "epic": "e1", "col": 3, "points": 5, "title": "Ingest events idempotently",
+      "criteria": ["Given a duplicate event id\nWhen received\nThen it is ignored"], "flagged": false }
+  ]
+}
+```
+`col` is the index into `columns`. `criteria` are Gherkin strings (the UI validates Given/When/Then).
+`flagged: true` marks a story the user wants you to revise. `epic` references an `epics[].id`.
+Epic `color` uses a CSS var: `--blue --primary --violet --green --amber --teal`.
+
+## arch.json
+```json
+{
+  "nodes": [ { "id": "gw", "type": "api", "label": "API Gateway", "x": 80, "y": 70,
+               "fields": [["route", "/v1/usage"], ["auth", "mTLS"]] } ],
+  "edges": [ { "from": "gw", "to": "meter" } ]
+}
+```
+`type` ∈ `api | db | ui | queue`. `x`/`y` are canvas pixel coords. `fields` is an array of
+`[key, value]` pairs (node schema/config). `edges` connect node ids (data flow).
+
+## infra.json
+```json
+{
+  "regions": [ { "id": "us-east", "label": "us-east-1", "on": true } ],
+  "resources": [
+    { "id": "db", "type": "db", "label": "Postgres (primary)", "multiAz": true, "public": true, "encrypted": false }
+  ],
+  "notes": { "db": "Override rationale text." }
+}
+```
+`type` ∈ `compute | lb | db | cache`. Per-type fields: compute `{min,max,cpu,public}`,
+lb `{tls,public}`, db `{multiAz,public,encrypted}`, cache `{public,encrypted}`. The UI runs a live
+security validator over these (e.g. public+unencrypted db = HIGH). `notes` maps resource id → text.
+
+## tests.json
+```json
+{
+  "types": ["Unit", "Integration", "UI / E2E"],
+  "components": [ { "id": "agg", "name": "Aggregator" } ],
+  "cells": {
+    "agg-0": { "status": "pass", "code": "it('sums usage', () => { … })" },
+    "agg-1": { "status": "none", "code": "" }
+  }
+}
+```
+`cells` keys are `"<componentId>-<typeIndex>"`. `status` ∈ `pass | fail | running | none`.
+
+## steering.json
+```json
+{
+  "groups": [
+    { "id": "style", "title": "Code style", "rules": [
+      { "id": "r1", "label": "Semicolons required", "on": true, "kind": "toggle" },
+      { "id": "r3", "label": "Max line length", "on": true, "kind": "slider", "value": 100, "min": 60, "max": 140, "step": 10 }
+    ] }
+  ],
+  "exceptions": [ { "id": "x1", "rule": "Max line length", "scope": "src/migrations/**", "note": "SQL strings exceed 100 cols" } ],
+  "sample": "function calc_total(items){ … }"
+}
+```
+`kind` ∈ `toggle | slider`. `sample` is the code shown in the policy Playground. This document maps
+to `AGENTS.md` + steering rules — keep them consistent when you regenerate either.

@@ -1,0 +1,13 @@
+# build tooling — not committed
+node_modules/
+build/
+
+# platform-specific compiled binary — rebuilt locally via `go build`
+aidlc-server
+aidlc-server.exe
+
+# NOTE: assets/ IS committed (the built UI) so `go build` alone yields a working binary.
+
+# dev test screenshot
+uitest-shot.png
+ingest-shot.png

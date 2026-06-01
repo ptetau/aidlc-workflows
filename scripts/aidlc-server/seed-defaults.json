@@ -1,0 +1,590 @@
+{
+  "project": {
+    "name": "billing-service",
+    "repo": "acme/billing-service",
+    "branch": "main",
+    "version": "v3"
+  },
+  "clarify": {
+    "requirement": [
+      {
+        "t": "Build a usage-based billing service that charges customers "
+      },
+      {
+        "amb": "q-cadence",
+        "t": "at the end of each cycle"
+      },
+      {
+        "t": ". Customers should be able to view their invoices and update payment methods at any time.\n\nWhen a payment "
+      },
+      {
+        "amb": "q-retry",
+        "t": "fails"
+      },
+      {
+        "t": ", the system retries and notifies the customer. Usage events arrive from "
+      },
+      {
+        "amb": "q-sources",
+        "t": "multiple upstream services"
+      },
+      {
+        "t": " and must be aggregated accurately before invoicing.\n\nInvoices should support "
+      },
+      {
+        "amb": "q-currency",
+        "t": "discounts and credits"
+      },
+      {
+        "t": ", and the finance team needs an export for reconciliation."
+      }
+    ],
+    "questions": [
+      {
+        "id": "q-cadence",
+        "n": "Q1",
+        "topic": "Billing cadence",
+        "text": "What defines \"the end of each cycle\"?",
+        "kind": "radio",
+        "options": [
+          "Calendar month, UTC midnight",
+          "Per-customer anniversary date",
+          "Fixed 30-day rolling window"
+        ],
+        "answer": 0,
+        "suggest": {
+          "label": "config/billing.yaml › cycle",
+          "value": "Calendar month, UTC midnight"
+        }
+      },
+      {
+        "id": "q-retry",
+        "n": "Q2",
+        "topic": "Failed payments",
+        "text": "How many retries before a customer enters dunning?",
+        "kind": "text",
+        "placeholder": "e.g. 3 retries over 7 days, then dunning email…",
+        "answer": "",
+        "suggest": {
+          "label": "stripe.config › retry_schedule",
+          "value": "3 retries (day 1, 3, 7), then dunning"
+        }
+      },
+      {
+        "id": "q-sources",
+        "n": "Q3",
+        "topic": "Event sources",
+        "text": "Which upstream services emit usage events?",
+        "kind": "multi",
+        "options": [
+          "api-gateway",
+          "compute-metering",
+          "storage-metering",
+          "egress-tracker"
+        ],
+        "answer": [
+          0,
+          1
+        ],
+        "suggest": {
+          "label": "topology › producers",
+          "value": [
+            0,
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "id": "q-currency",
+        "n": "Q4",
+        "topic": "Money handling",
+        "text": "Do we support multi-currency at launch?",
+        "kind": "radio",
+        "options": [
+          "USD only — multi-currency is a later epic",
+          "Multi-currency from day one"
+        ],
+        "answer": 0,
+        "suggest": {
+          "label": "epics › #1842",
+          "value": "USD only — multi-currency is a later epic"
+        }
+      },
+      {
+        "id": "q-export",
+        "n": "Q5",
+        "topic": "Reconciliation",
+        "text": "What format does finance need for the export?",
+        "kind": "radio",
+        "options": [
+          "CSV (one row per line item)",
+          "Signed JSON ledger",
+          "Both, selectable"
+        ],
+        "answer": null,
+        "suggest": {
+          "label": "finance/spec.md",
+          "value": "CSV (one row per line item)"
+        }
+      }
+    ],
+    "notes": [
+      {
+        "id": "n1",
+        "kind": "CONSTRAINT",
+        "text": "All money math in integer cents. No floats anywhere in the codebase."
+      },
+      {
+        "id": "n2",
+        "kind": "PRIYA · 2h",
+        "text": "Default currency is USD until the multi-currency epic lands in Q3."
+      }
+    ]
+  },
+  "stories": {
+    "intent": "Customers are billed accurately for what they use, can manage payment without support, and finance can reconcile every cent.",
+    "columns": [
+      "Backlog",
+      "This Sprint",
+      "In Progress",
+      "Done"
+    ],
+    "epics": [
+      {
+        "id": "e1",
+        "title": "Usage aggregation",
+        "color": "var(--blue)"
+      },
+      {
+        "id": "e2",
+        "title": "Invoicing & payment",
+        "color": "var(--primary)"
+      },
+      {
+        "id": "e3",
+        "title": "Finance reconciliation",
+        "color": "var(--violet)"
+      }
+    ],
+    "cards": [
+      {
+        "id": "s1",
+        "epic": "e1",
+        "col": 3,
+        "points": 5,
+        "title": "Ingest usage events idempotently",
+        "criteria": [
+          "Given a duplicate event id\nWhen it is received\nThen it is ignored and logged"
+        ],
+        "flagged": false
+      },
+      {
+        "id": "s2",
+        "epic": "e1",
+        "col": 2,
+        "points": 8,
+        "title": "Aggregate events into billable units",
+        "criteria": [
+          "Given raw usage events for a cycle\nWhen aggregation runs\nThen totals match the metering source within 0.01%"
+        ],
+        "flagged": false
+      },
+      {
+        "id": "s3",
+        "epic": "e2",
+        "col": 1,
+        "points": 5,
+        "title": "Generate invoice at cycle close",
+        "criteria": [
+          "Given a closed billing cycle\nWhen the invoice job runs\nThen a draft invoice is created with all line items"
+        ],
+        "flagged": false
+      },
+      {
+        "id": "s4",
+        "epic": "e2",
+        "col": 1,
+        "points": 3,
+        "title": "Retry failed payments on schedule",
+        "criteria": [
+          "Given a failed charge\nWhen the retry window elapses\nThen the charge is re-attempted up to 3 times"
+        ],
+        "flagged": true
+      },
+      {
+        "id": "s5",
+        "epic": "e2",
+        "col": 0,
+        "points": 3,
+        "title": "Self-serve payment method update",
+        "criteria": [
+          "Given a logged-in customer\nWhen they submit a new card\nThen the default payment method is updated"
+        ],
+        "flagged": false
+      },
+      {
+        "id": "s6",
+        "epic": "e3",
+        "col": 0,
+        "points": 5,
+        "title": "CSV reconciliation export",
+        "criteria": [
+          "Given a date range\nWhen finance requests an export\nThen a CSV with one row per line item is produced"
+        ],
+        "flagged": false
+      },
+      {
+        "id": "s7",
+        "epic": "e3",
+        "col": 0,
+        "points": 2,
+        "title": "Credit & discount line items",
+        "criteria": [],
+        "flagged": true
+      }
+    ]
+  },
+  "arch": {
+    "nodes": [
+      {
+        "id": "gw",
+        "type": "api",
+        "label": "API Gateway",
+        "x": 80,
+        "y": 70,
+        "fields": [
+          [
+            "route",
+            "/v1/usage"
+          ],
+          [
+            "auth",
+            "mTLS"
+          ]
+        ]
+      },
+      {
+        "id": "meter",
+        "type": "queue",
+        "label": "Metering Queue",
+        "x": 80,
+        "y": 250,
+        "fields": [
+          [
+            "topic",
+            "usage.events"
+          ],
+          [
+            "retention",
+            "7d"
+          ]
+        ]
+      },
+      {
+        "id": "agg",
+        "type": "api",
+        "label": "Aggregator",
+        "x": 360,
+        "y": 160,
+        "fields": [
+          [
+            "window",
+            "1h tumbling"
+          ],
+          [
+            "idempotent",
+            "true"
+          ]
+        ]
+      },
+      {
+        "id": "db",
+        "type": "db",
+        "label": "Billing DB",
+        "x": 360,
+        "y": 360,
+        "fields": [
+          [
+            "engine",
+            "Postgres 16"
+          ],
+          [
+            "pool",
+            "20"
+          ]
+        ]
+      },
+      {
+        "id": "inv",
+        "type": "api",
+        "label": "Invoice Service",
+        "x": 640,
+        "y": 120,
+        "fields": [
+          [
+            "cron",
+            "0 0 1 * *"
+          ],
+          [
+            "idempotent",
+            "true"
+          ]
+        ]
+      },
+      {
+        "id": "web",
+        "type": "ui",
+        "label": "Customer Portal",
+        "x": 640,
+        "y": 330,
+        "fields": [
+          [
+            "framework",
+            "React"
+          ],
+          [
+            "ssr",
+            "true"
+          ]
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "from": "gw",
+        "to": "meter"
+      },
+      {
+        "from": "meter",
+        "to": "agg"
+      },
+      {
+        "from": "agg",
+        "to": "db"
+      },
+      {
+        "from": "db",
+        "to": "inv"
+      },
+      {
+        "from": "inv",
+        "to": "web"
+      },
+      {
+        "from": "db",
+        "to": "web"
+      }
+    ]
+  },
+  "infra": {
+    "regions": [
+      {
+        "id": "us-east",
+        "label": "us-east-1",
+        "on": true
+      },
+      {
+        "id": "us-west",
+        "label": "us-west-2",
+        "on": true
+      },
+      {
+        "id": "eu-west",
+        "label": "eu-west-1",
+        "on": false
+      }
+    ],
+    "resources": [
+      {
+        "id": "compute",
+        "type": "compute",
+        "label": "Billing API cluster",
+        "min": 2,
+        "max": 10,
+        "cpu": 70,
+        "public": false
+      },
+      {
+        "id": "lb",
+        "type": "lb",
+        "label": "Application LB",
+        "tls": true,
+        "public": true
+      },
+      {
+        "id": "db",
+        "type": "db",
+        "label": "Postgres (primary)",
+        "multiAz": true,
+        "public": true,
+        "encrypted": false
+      },
+      {
+        "id": "cache",
+        "type": "cache",
+        "label": "Redis (sessions)",
+        "public": false,
+        "encrypted": true
+      }
+    ]
+  },
+  "tests": {
+    "types": [
+      "Unit",
+      "Integration",
+      "UI / E2E"
+    ],
+    "components": [
+      {
+        "id": "agg",
+        "name": "Aggregator"
+      },
+      {
+        "id": "inv",
+        "name": "Invoice Service"
+      },
+      {
+        "id": "pay",
+        "name": "Payment Retry"
+      },
+      {
+        "id": "portal",
+        "name": "Customer Portal"
+      }
+    ],
+    "cells": {
+      "agg-0": {
+        "status": "pass",
+        "code": "it('sums usage events', () => {\n  const total = aggregate(events)\n  expect(total).toBe(4200) // cents\n})"
+      },
+      "agg-1": {
+        "status": "pass",
+        "code": "it('matches metering source', async () => {\n  const r = await reconcile(cycle)\n  expect(r.drift).toBeLessThan(0.0001)\n})"
+      },
+      "agg-2": {
+        "status": "none",
+        "code": ""
+      },
+      "inv-0": {
+        "status": "pass",
+        "code": "it('builds line items', () => {\n  expect(invoice.lines).toHaveLength(3)\n})"
+      },
+      "inv-1": {
+        "status": "fail",
+        "code": "it('is idempotent per cycle', async () => {\n  await run(cycle); await run(cycle)\n  expect(count(cycle)).toBe(1) // got 2\n})"
+      },
+      "inv-2": {
+        "status": "pass",
+        "code": "test('renders invoice PDF', async ({ page }) => {\n  await expect(page.locator('.total')).toContainText('$42.00')\n})"
+      },
+      "pay-0": {
+        "status": "pass",
+        "code": "it('retries 3 times', () => {\n  expect(schedule.length).toBe(3)\n})"
+      },
+      "pay-1": {
+        "status": "fail",
+        "code": "it('stops after success', async () => {\n  await retry(charge)\n  expect(attempts).toBe(1) // retried after success\n})"
+      },
+      "pay-2": {
+        "status": "none",
+        "code": ""
+      },
+      "portal-0": {
+        "status": "pass",
+        "code": "it('validates card input', () => {\n  expect(validate('4242')).toBe(false)\n})"
+      },
+      "portal-1": {
+        "status": "none",
+        "code": ""
+      },
+      "portal-2": {
+        "status": "pass",
+        "code": "test('updates payment method', async ({ page }) => {\n  await page.fill('#card', '4242...')\n  await expect(page.locator('.saved')).toBeVisible()\n})"
+      }
+    }
+  },
+  "steering": {
+    "groups": [
+      {
+        "id": "style",
+        "title": "Code style",
+        "rules": [
+          {
+            "id": "r1",
+            "label": "Semicolons required",
+            "on": true,
+            "kind": "toggle"
+          },
+          {
+            "id": "r2",
+            "label": "Single quotes for strings",
+            "on": true,
+            "kind": "toggle"
+          },
+          {
+            "id": "r3",
+            "label": "Max line length",
+            "on": true,
+            "kind": "slider",
+            "value": 100,
+            "min": 60,
+            "max": 140,
+            "step": 10
+          }
+        ]
+      },
+      {
+        "id": "arch",
+        "title": "Architecture",
+        "rules": [
+          {
+            "id": "r4",
+            "label": "Money as integer cents (no floats)",
+            "on": true,
+            "kind": "toggle"
+          },
+          {
+            "id": "r5",
+            "label": "All external calls must be idempotent",
+            "on": true,
+            "kind": "toggle"
+          },
+          {
+            "id": "r6",
+            "label": "Repository pattern for data access",
+            "on": false,
+            "kind": "toggle"
+          }
+        ]
+      },
+      {
+        "id": "naming",
+        "title": "Naming",
+        "rules": [
+          {
+            "id": "r7",
+            "label": "camelCase functions, PascalCase types",
+            "on": true,
+            "kind": "toggle"
+          },
+          {
+            "id": "r8",
+            "label": "Boolean names start with is/has/should",
+            "on": true,
+            "kind": "toggle"
+          }
+        ]
+      }
+    ],
+    "exceptions": [
+      {
+        "id": "x1",
+        "rule": "Max line length",
+        "scope": "src/migrations/**",
+        "note": "SQL strings exceed 100 cols"
+      }
+    ],
+    "sample": "function calc_total(items){\n  var total = 0.0\n  for(i=0;i<items.length;i++){\n    total = total + items[i].price\n  }\n  return total\n}"
+  }
+}

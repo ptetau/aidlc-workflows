@@ -16,10 +16,12 @@ If the invocation includes a sub-command word, handle it immediately and stop:
 
 | Invocation | Action |
 |---|---|
+| `/aidlc workspace` | Launch the interactive workspace server (six-doc web editor) — read `common/workspace-server.md` |
+| `/aidlc ingest` | React to workspace edits the user saved — read `common/ingest.md` |
 | `/aidlc update html` | Switch project to HTML doc mode — read `common/update-mode.md` |
 | `/aidlc update markdown` | Switch project to markdown-only mode — read `common/update-mode.md` |
 
-Sub-command rule file path: `aidlc-rules/aws-aidlc-rule-details/common/update-mode.md` (resolve via the same rule-details path logic as other common rules)
+Sub-command rule files live under `aidlc-rules/aws-aidlc-rule-details/common/` (`workspace-server.md`, `ingest.md`, `update-mode.md`) — resolve via the same rule-details path logic as other common rules.
 
 If no sub-command is present, proceed to the main workflow below.
 
