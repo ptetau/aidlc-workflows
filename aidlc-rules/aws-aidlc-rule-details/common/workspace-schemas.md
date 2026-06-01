@@ -7,6 +7,11 @@ Match the shapes exactly; the UI is coupled to them.
 
 All files are pretty-printed JSON (2-space). The server seeds defaults for any missing file.
 
+**When you FIRST generate a covered doc**, also write the same content to
+`aidlc-docs/workspace/.snapshot/<doc>.json`. That sets the ingest baseline to the generated state,
+so the first `/aidlc ingest` after the user edits diffs cleanly against what you produced (rather
+than treating every field as new).
+
 ---
 
 ## project.json
