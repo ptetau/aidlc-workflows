@@ -379,6 +379,16 @@ func renderSteering(b *strings.Builder, m map[string]any) {
 	if s := str(m["sample"]); s != "" {
 		b.WriteString("## Sample\n\n```\n" + s + "\n```\n")
 	}
+	if ag := asMap(m["agents"]); len(ag) > 0 {
+		b.WriteString("\n## AGENTS.md\n\n")
+		for _, kv := range [][2]string{{"overview", "Project overview"}, {"techStack", "Tech stack"},
+			{"repoStructure", "Repository structure"}, {"buildAndRun", "Build & run"},
+			{"conventions", "Key conventions"}, {"architectureDecisions", "Architecture decisions"}} {
+			if v := str(ag[kv[0]]); v != "" {
+				fmt.Fprintf(b, "### %s\n\n%s\n\n", kv[1], v)
+			}
+		}
+	}
 }
 
 // ---------------- coercion helpers (parsed JSON => map/[]any/float64/string/bool) ----------------

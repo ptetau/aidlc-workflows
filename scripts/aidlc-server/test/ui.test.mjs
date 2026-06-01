@@ -224,6 +224,28 @@ test('stories Personas + Map tabs: edit persona, toggle RBAC, persist', async (t
   assert.deepEqual(page.__errors, []);
 });
 
+test('steering AGENTS.md tab: edit a section + persist', async (t) => {
+  const app = await openApp({
+    project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },
+    steering: { groups: [], exceptions: [], sample: '', agents: { overview: 'A thing.', techStack: 'Go' } },
+  });
+  t.after(app.cleanup);
+  const { page, ws } = app;
+  await page.locator('nav button', { hasText: 'Steering' }).first().click();
+  await page.waitForTimeout(200);
+  await page.getByRole('button', { name: 'AGENTS.md' }).first().click();
+  await page.waitForTimeout(300);
+  assert.ok(await page.getByText('Project overview').first().isVisible(), 'AGENTS sections shown');
+  // edit the overview textarea (first one) and save
+  const ta = page.locator('textarea').first();
+  await ta.fill('A usage-based billing service.');
+  await page.getByRole('button', { name: /^Save$/ }).first().click();
+  await page.waitForSelector('.toast', { timeout: 4000 });
+  const sd = readWorkspaceDoc(ws, 'steering');
+  assert.equal(sd.agents.overview, 'A usage-based billing service.', 'AGENTS content persisted');
+  assert.deepEqual(page.__errors, []);
+});
+
 test('tests Summary tab: build status + coverage + ready-for-ops persists', async (t) => {
   const app = await openApp({
     project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },

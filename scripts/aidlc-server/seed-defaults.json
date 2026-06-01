@@ -802,6 +802,14 @@
         "note": "SQL strings exceed 100 cols"
       }
     ],
-    "sample": "function calc_total(items){\n  var total = 0.0\n  for(i=0;i<items.length;i++){\n    total = total + items[i].price\n  }\n  return total\n}"
+    "sample": "function calc_total(items){\n  var total = 0.0\n  for(i=0;i<items.length;i++){\n    total = total + items[i].price\n  }\n  return total\n}",
+    "agents": {
+      "overview": "A usage-based billing service: charges customers per cycle, retries failed payments, and lets finance reconcile every cent.",
+      "techStack": "Go services · Postgres 16 · Redis. REST APIs over mTLS.",
+      "repoStructure": "services/<unit> per deployable unit · shared/ for cross-cutting · aidlc-docs/ for design artifacts.",
+      "buildAndRun": "make build · make test · make run (see construction/build-and-test).",
+      "conventions": "Money in integer cents (no floats). All external calls idempotent. camelCase functions, PascalCase types.",
+      "architectureDecisions": "USD-only at launch (multi-currency deferred to #1842). Aggregation uses idempotent 1h tumbling windows."
+    }
   }
 }

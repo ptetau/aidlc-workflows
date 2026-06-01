@@ -9,6 +9,8 @@ function SteeringWS() {
   const [exceptions, setExceptions] = pUseState(seed.exceptions || []);
   const [adding, setAdding] = pUseState(false);
   const [exDraft, setExDraft] = pUseState({ rule: '', scope: '', note: '' });
+  const [tab, setTab] = pUseState('rules'); // rules | agents
+  const [agents, setAgents] = pUseState(() => seed.agents || {});
 
   const allRules = groups.flatMap(g => g.rules);
   const activeCount = allRules.filter(r => r.on).length;
@@ -16,18 +18,24 @@ function SteeringWS() {
   const setRule = (gid, rid, patch) => setGroups(gs => gs.map(g => g.id === gid ? { ...g, rules: g.rules.map(r => r.id === rid ? { ...r, ...patch } : r) } : g));
 
   // editable state in SEED shape — persisted to workspace/steering.json (sample carried through)
-  const buildState = () => ({ groups, exceptions, sample: seed.sample });
+  const buildState = () => ({ groups, exceptions, sample: seed.sample, agents });
 
   return (
     <>
-      <WorkHeader eyebrow="Steering Policy Center" title="Govern the agents"
-        desc="The standards every agent must follow when building this project. Toggle rules and record project-specific exceptions."
+      <WorkHeader eyebrow="Steering Policy Center"
+        title={tab === 'rules' ? 'Govern the agents' : 'AGENTS.md'}
+        desc={tab === 'rules'
+          ? 'The standards every agent must follow when building this project. Toggle rules and record project-specific exceptions.'
+          : 'The AI steering document written to the project root — what an agent reads first to orient.'}
         right={<>
-          <span className="pill pill-clay">{activeCount} active rules</span>
+          <Segmented options={[{ value: 'rules', label: 'Rules' }, { value: 'agents', label: 'AGENTS.md' }]} value={tab} onChange={setTab} />
+          {tab === 'rules' && <span className="pill pill-clay">{activeCount} active rules</span>}
           <Btn kind="primary" icon={I.check} onClick={() => save('steering', buildState())}>Save</Btn>
         </>} />
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      {tab === 'agents' && <AgentsDoc agents={agents} setAgents={setAgents} />}
+
+      <div style={{ flex: 1, minHeight: 0, display: tab === 'rules' ? 'flex' : 'none' }}>
         {/* rules */}
         <div className="scroll" style={{ flex: 1, minWidth: 0, padding: '22px max(22px, calc((100% - 720px) / 2))' }}>
           {groups.map(g => (
@@ -94,6 +102,33 @@ function SteeringWS() {
 
       </div>
     </>
+  );
+}
+
+/* ---- AGENTS.md tab — the root steering doc, section by section ---- */
+const AGENTS_SECTIONS = [
+  ['overview', 'Project overview', 'What this project is, in 2–3 sentences.'],
+  ['techStack', 'Tech stack', 'Languages, frameworks, key libraries + versions.'],
+  ['repoStructure', 'Repository structure', 'Top-level layout and where things live.'],
+  ['buildAndRun', 'Build & run', 'Commands to install, build, run, and test.'],
+  ['conventions', 'Key conventions', 'Naming, patterns, do/don’t the agent must follow.'],
+  ['architectureDecisions', 'Architecture decisions', 'Load-bearing choices and why.'],
+];
+function AgentsDoc({ agents, setAgents }) {
+  return (
+    <div className="scroll fadein" style={{ flex: 1, minHeight: 0, padding: '18px 28px 28px', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 820 }}>
+      <div className="card" style={{ padding: '11px 14px', boxShadow: 'none', borderColor: 'var(--line)' }}>
+        <span className="mono" style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>Generated to <b>AGENTS.md</b> at the project root — regenerated at the end of Construction. Markdown is allowed in each field.</span>
+      </div>
+      {AGENTS_SECTIONS.map(([key, label, hint]) => (
+        <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span className="eyebrow">{label}</span>
+          <span className="muted" style={{ fontSize: 11.5, marginTop: -3 }}>{hint}</span>
+          <textarea className="textarea" rows={key === 'overview' ? 3 : 4} value={agents[key] || ''}
+            onChange={e => setAgents({ ...agents, [key]: e.target.value })} style={{ fontSize: 12.5, lineHeight: 1.55 }} />
+        </label>
+      ))}
+    </div>
   );
 }
 

@@ -145,8 +145,13 @@ list, and the `readyForOperations` gate.
     ] }
   ],
   "exceptions": [ { "id": "x1", "rule": "Max line length", "scope": "src/migrations/**", "note": "SQL strings exceed 100 cols" } ],
-  "sample": "function calc_total(items){ … }"
+  "sample": "function calc_total(items){ … }",
+  "agents": {
+    "overview": "…", "techStack": "…", "repoStructure": "…",
+    "buildAndRun": "…", "conventions": "…", "architectureDecisions": "…"
+  }
 }
 ```
-`kind` ∈ `toggle | slider`. `sample` is the code shown in the policy Playground. This document maps
-to `AGENTS.md` + steering rules — keep them consistent when you regenerate either.
+`kind` ∈ `toggle | slider`. `sample` is a representative code snippet (carried through). `agents`
+holds the **AGENTS.md** content (the root steering doc) section-by-section — keep it consistent with
+the rules; it is what `AGENTS.md` is generated from. Each `agents.*` field may contain markdown.
