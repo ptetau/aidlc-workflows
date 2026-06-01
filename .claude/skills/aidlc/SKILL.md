@@ -47,10 +47,18 @@ aidlc/
 ├── WORKFLOW.md              # full AI-DLC orchestration manual (read first)
 ├── quiz-skill.md            # bundled /quiz skill — card format for all Q&A
 ├── scripts/
-│   └── md_to_aidlc_html.py  # artifact → HTML converter
+│   ├── md_to_aidlc_html.py  # markdown artifact → static HTML viewer
+│   └── aidlc-server/        # Go workspace server (six-doc web editor) + JSON↔md converter
+│       ├── main.go convert.go convert_cli.go   # server + export/import CLI
+│       ├── assets/          # precompiled UI (embedded via go:embed) — committed
+│       ├── seed-defaults.json   build.mjs   go.mod
+│       └── test/            # Playwright UI tests (+ *_test.go beside the sources)
 └── aidlc-rule-details/      # per-stage rule files, read on demand
     ├── common/  inception/  construction/  extensions/  operations/
 ```
+
+The workspace server binary is built on first use (`go build` — assets are committed, so no Node
+needed just to run it). See `common/workspace-server.md`.
 
 ## Notes
 
