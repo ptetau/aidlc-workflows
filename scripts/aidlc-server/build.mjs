@@ -18,7 +18,7 @@ const OUT = join(here, 'assets');
 // concatenation order MUST match the old HTML: primitives → workspaces → shell → entry
 const ORDER = [
   'shared.jsx', 'ws-clarify.jsx', 'ws-stories.jsx', 'ws-architecture.jsx',
-  'ws-infra.jsx', 'ws-tests.jsx', 'ws-steering.jsx', 'shell.jsx', 'entry.jsx',
+  'ws-infra.jsx', 'ws-tests.jsx', 'ws-steering.jsx', 'ws-meta.jsx', 'shell.jsx', 'entry.jsx',
 ];
 
 async function main() {
@@ -47,6 +47,7 @@ async function main() {
   await copyFile(join(SRC, 'index.html'), join(OUT, 'index.html'));
   await copyFile(join(VENDOR, 'react.production.min.js'), join(OUT, 'react.production.min.js'));
   await copyFile(join(VENDOR, 'react-dom.production.min.js'), join(OUT, 'react-dom.production.min.js'));
+  await copyFile(join(VENDOR, 'marked.min.js'), join(OUT, 'marked.min.js'));
   for (const f of await readdir(join(VENDOR, 'fonts'))) {
     await copyFile(join(VENDOR, 'fonts', f), join(OUT, 'fonts', f));
   }

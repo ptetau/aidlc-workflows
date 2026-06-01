@@ -2,6 +2,8 @@
    Run: node --test  (from scripts/aidlc-server). Needs Go + a Playwright Chromium. */
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { openApp, closeBrowser, readWorkspaceDoc, readDigests, appendAgentDigest } from './helpers.mjs';
 
 after(closeBrowser);
@@ -14,7 +16,8 @@ test('renders all six workspaces with headings, no console errors', async (t) =>
   t.after(app.cleanup);
   const { page } = app;
 
-  assert.equal(await page.locator('nav button').count(), 6, 'six nav items');
+  // nav = Overview + 6 workspaces + Documents
+  assert.equal(await page.locator('nav button').count(), 8, 'overview + six workspaces + documents');
   for (const label of WORKSPACES) {
     await page.locator('nav button', { hasText: label }).first().click();
     await page.waitForTimeout(200);
@@ -161,6 +164,31 @@ test('Stories outline: readiness + human marker, inline criteria editing', async
   await page.waitForTimeout(200);
   assert.ok(await page.getByText('Acceptance criteria').first().isVisible(), 'inline editor opens');
   assert.deepEqual(page.__errors, []);
+});
+
+test('Overview reflects aidlc-state.md; Documents lists & renders markdown', async (t) => {
+  const app = await openApp();
+  t.after(app.cleanup);
+  const root = dirname(app.ws); // aidlc-docs/
+  writeFileSync(join(root, 'aidlc-state.md'),
+    '# AI-DLC State Tracking\n\n## Project Information\n- **Project Type**: Greenfield\n\n## Project Configuration\n- **Documentation Format**: html\n\n## Stage Progress\n- [x] INCEPTION - Requirements Analysis\n- [ ] CONSTRUCTION - Code Generation (SKIP)\n');
+  writeFileSync(join(root, 'audit.md'), '# Audit Log\n\nA recorded entry.\n');
+  const { page } = app;
+  await page.reload({ waitUntil: 'networkidle' }); // re-fetch /api/project with the state file present
+
+  // Overview
+  await page.locator('nav button', { hasText: 'Overview' }).first().click();
+  await page.waitForTimeout(400);
+  assert.ok(await page.getByText('Requirements Analysis').first().isVisible(), 'stage from state shown');
+  assert.ok(await page.getByText('Greenfield').first().isVisible(), 'project info shown');
+
+  // Documents — list + render
+  await page.locator('nav button', { hasText: 'Documents' }).first().click();
+  await page.waitForTimeout(400);
+  await page.getByText('Audit Log').first().click();
+  await page.waitForTimeout(400);
+  assert.ok(await page.locator('.doc-md h1').first().isVisible(), 'markdown rendered (heading present)');
+  assert.deepEqual(page.__errors, [], 'no errors on Overview/Documents');
 });
 
 test('boots from a real (non-demo) seeded project', async (t) => {

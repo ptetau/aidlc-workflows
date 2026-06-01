@@ -98,6 +98,9 @@ func main() {
 	mux.HandleFunc("GET /api/state", handleState)
 	mux.HandleFunc("POST /api/save", handleSave)
 	mux.HandleFunc("GET /api/digests", handleDigests)
+	mux.HandleFunc("GET /api/project", handleProject) // read-only engine state (parsed aidlc-state.md)
+	mux.HandleFunc("GET /api/docs", handleDocs)        // all aidlc-docs/**/*.md outside workspace/
+	mux.HandleFunc("GET /api/doc", handleDoc)          // raw markdown of one doc
 	mux.Handle("/", http.FileServer(http.FS(sub)))
 
 	// Bind a port now (keeping the listener avoids a race). port 0 → a stable per-project

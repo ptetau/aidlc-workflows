@@ -13,6 +13,15 @@ const NAV_GROUPS = [
   { phase: 'Construction', items: WORKSPACES.filter(w => w.phase === 'Construction') },
   { phase: 'Steering', items: WORKSPACES.filter(w => w.phase === 'Steering') },
 ];
+// meta views (read-only reflections) shown above/below the editable workspaces
+const OVERVIEW = { id: 'overview', label: 'Overview', icon: I.star, hue: 'var(--ink-soft)' };
+const DOCUMENTS = { id: 'documents', label: 'Documents', icon: I.note, hue: 'var(--ink-soft)' };
+// which aidlc-state.md stage each editable workspace corresponds to (for status dots)
+const STAGE_OF = {
+  clarify: 'Requirements Analysis', stories: 'User Stories', arch: 'Application Design',
+  infra: 'Infrastructure Design', tests: 'Build and Test',
+};
+const STATUS_DOT = { done: 'var(--green)', skip: 'var(--ink-faint)', pending: 'var(--amber)' };
 
 function useTheme() {
   const [theme, setTheme] = useState(() => localStorage.getItem('aidlc-theme') || 'light');
@@ -23,7 +32,34 @@ function useTheme() {
   return [theme, setTheme];
 }
 
-function Rail({ active, setActive, theme, setTheme }) {
+function NavButton({ w, active, setActive, dot }) {
+  const on = w.id === active;
+  return (
+    <button onClick={() => setActive(w.id)} title={w.phase || w.label} style={{
+      display: 'flex', alignItems: 'center', gap: 11, padding: '9px 10px', borderRadius: 9,
+      border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%', font: 'inherit',
+      fontSize: 13.5, fontWeight: on ? 650 : 500,
+      background: on ? 'var(--surface)' : 'transparent',
+      color: on ? 'var(--ink)' : 'var(--ink-soft)',
+      boxShadow: on ? 'var(--shadow-sm)' : 'none', transition: 'background .14s, color .14s',
+    }}
+    onMouseEnter={e => { if (!on) e.currentTarget.style.background = 'rgba(120,90,50,.06)'; }}
+    onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent'; }}>
+      <span style={{ width: 20, height: 20, display: 'flex', color: on ? w.hue : 'var(--ink-faint)', flex: '0 0 20px' }}>{w.icon}</span>
+      <span style={{ flex: 1 }}>{w.label}</span>
+      {dot && <span title={'stage: ' + dot.status} style={{ width: 7, height: 7, borderRadius: '50%', background: dot.color }}></span>}
+      {on && !dot && <span style={{ width: 6, height: 6, borderRadius: 3, background: w.hue }}></span>}
+    </button>
+  );
+}
+
+function Rail({ active, setActive, theme, setTheme, stages }) {
+  const statusOf = (wid) => {
+    const name = STAGE_OF[wid];
+    if (!name || !stages) return null;
+    const s = stages.find(x => (x.name || '').toLowerCase().includes(name.toLowerCase()));
+    return s ? { status: s.status, color: STATUS_DOT[s.status] || 'var(--ink-faint)' } : null;
+  };
   return (
     <div style={{
       width: 224, flex: '0 0 224px', background: 'var(--rail)', borderRight: '1px solid var(--rail-line)',
@@ -43,35 +79,20 @@ function Rail({ active, setActive, theme, setTheme }) {
       </div>
 
       <nav className="scroll" style={{ display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', flex: '0 1 auto' }}>
+        <div style={{ marginBottom: 8 }}>
+          <NavButton w={OVERVIEW} active={active} setActive={setActive} />
+        </div>
         {NAV_GROUPS.map((g, gi) => (
           <div key={g.phase} style={{ marginBottom: 8 }}>
-            {g.phase === 'Steering'
-              ? <div className="hr" style={{ margin: '4px 10px 10px' }}></div>
-              : null}
-            <div className="eyebrow" style={{ padding: gi === 0 ? '6px 10px 8px' : '2px 10px 8px' }}>
+            {g.phase === 'Steering' ? <div className="hr" style={{ margin: '4px 10px 10px' }}></div> : null}
+            <div className="eyebrow" style={{ padding: '2px 10px 8px' }}>
               {g.phase === 'Steering' ? 'Cross-cutting' : g.phase}
             </div>
-            {g.items.map(w => {
-              const on = w.id === active;
-              return (
-                <button key={w.id} onClick={() => setActive(w.id)} title={w.phase} style={{
-                  display: 'flex', alignItems: 'center', gap: 11, padding: '9px 10px', borderRadius: 9,
-                  border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%', font: 'inherit',
-                  fontSize: 13.5, fontWeight: on ? 650 : 500,
-                  background: on ? 'var(--surface)' : 'transparent',
-                  color: on ? 'var(--ink)' : 'var(--ink-soft)',
-                  boxShadow: on ? 'var(--shadow-sm)' : 'none', transition: 'background .14s, color .14s',
-                }}
-                onMouseEnter={e => { if (!on) e.currentTarget.style.background = 'rgba(120,90,50,.06)'; }}
-                onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent'; }}>
-                  <span style={{ width: 20, height: 20, display: 'flex', color: on ? w.hue : 'var(--ink-faint)', flex: '0 0 20px' }}>{w.icon}</span>
-                  <span style={{ flex: 1 }}>{w.label}</span>
-                  {on && <span style={{ width: 6, height: 6, borderRadius: 3, background: w.hue }}></span>}
-                </button>
-              );
-            })}
+            {g.items.map(w => <NavButton key={w.id} w={w} active={active} setActive={setActive} dot={statusOf(w.id)} />)}
           </div>
         ))}
+        <div className="hr" style={{ margin: '4px 10px 10px' }}></div>
+        <NavButton w={DOCUMENTS} active={active} setActive={setActive} />
       </nav>
 
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -107,7 +128,7 @@ function Rail({ active, setActive, theme, setTheme }) {
 }
 
 function TopBar({ active, onOpenDigest, unread }) {
-  const w = WORKSPACES.find(x => x.id === active);
+  const w = WORKSPACES.find(x => x.id === active) || (active === 'overview' ? OVERVIEW : active === 'documents' ? DOCUMENTS : { label: active });
   const repo = (window.SEED && window.SEED.project && window.SEED.project.repo) || 'project';
   return (
     <div style={{ height: 54, flex: '0 0 54px', borderBottom: '1px solid var(--line)', display: 'flex',
@@ -118,9 +139,9 @@ function TopBar({ active, onOpenDigest, unread }) {
         <span style={{ color: 'var(--ink)', fontWeight: 600 }}>{w.label}</span>
       </div>
       <div style={{ flex: 1 }}></div>
-      <div className="pill pill-neutral" title={w.phase === 'Steering' ? 'Cross-cutting policy — applies across phases' : 'AI-DLC phase'}>
+      {w.phase && <div className="pill pill-neutral" title={w.phase === 'Steering' ? 'Cross-cutting policy — applies across phases' : 'AI-DLC phase'}>
         {w.phase === 'Steering' ? 'cross-cutting' : w.phase.toLowerCase()}
-      </div>
+      </div>}
       <button onClick={onOpenDigest} title="Digest — the change-conversation with aidlc" style={{
         position: 'relative', display: 'flex', alignItems: 'center', gap: 7, marginLeft: 4,
         border: '1px solid var(--line-2)', background: 'var(--surface)', cursor: 'pointer',
@@ -253,15 +274,20 @@ function AppShell() {
   const unread = Math.max(0, agentCount - seenAgent);
   const openDigest = () => { setDigestOpen(true); setSeenAgent(agentCount); localStorage.setItem('aidlc-digest-seen-agent', String(agentCount)); };
 
+  // read-only engine state (parsed aidlc-state.md) — for nav status dots + the Overview view
+  const [stages, setStages] = useState(null);
+  useEffect(() => { fetch('/api/project').then(r => r.json()).then(p => setStages(p.stages || [])).catch(() => {}); }, []);
+
   const registry = {
     clarify: window.ClarifyWS, stories: window.StoriesWS, arch: window.ArchWS,
     infra: window.InfraWS, tests: window.TestsWS, steering: window.SteeringWS,
+    overview: window.OverviewWS, documents: window.DocumentsWS,
   };
   const WS = registry[active] || (() => <div style={{ padding: 40 }} className="muted">Coming soon…</div>);
 
   return (
     <div style={{ display: 'flex', height: '100%' }}>
-      <Rail active={active} setActive={setActive} theme={theme} setTheme={setTheme} />
+      <Rail active={active} setActive={setActive} theme={theme} setTheme={setTheme} stages={stages} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <TopBar active={active} onOpenDigest={openDigest} unread={unread} />
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} key={active}>
