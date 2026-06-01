@@ -58,6 +58,9 @@ All subsequent rule detail file references (e.g., `common/process-overview.md`, 
 - Provide text alternatives for complex visual content
 - Test content parsing compatibility
 
+## MANDATORY: HTML Artifacts
+**CRITICAL**: After writing any `.md` artifact under `aidlc-docs/`, immediately generate its HTML companion by running the script described in `common/html-artifacts.md`. The HTML file is written alongside the `.md` (same directory, `.html` extension). Do NOT generate HTML for `audit.md` or `aidlc-state.md`. See `common/html-artifacts.md` for the full rule including script path resolution and the diff JSON format.
+
 ## MANDATORY: Interview Format (quiz-style)
 **CRITICAL**: When you need any content/clarification from the user at any phase, you MUST gather it by **interviewing the user inline, one quiz-style question card per turn** — NOT by creating `{phase}-questions.md` files and waiting for `[Answer]:` tags. This applies to every stage.
 
