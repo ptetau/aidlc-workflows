@@ -27,7 +27,7 @@ It is **explicit-only**: it activates when the user types `/aidlc`, not automati
 
 ## Interview format (quiz-style)
 
-This skill gathers all clarification by **interviewing the user inline, one quiz-style question card per turn** — not by creating `{phase}-questions.md` files and waiting for `[Answer]:` tags. See `aidlc-rules/aws-aidlc-rule-details/common/question-format-guide.md` for the complete interview protocol (ASCII card, single-letter reply, `[✓]` echo, contradiction detection, final resolved view, and the file/`/squiz` fallback for 8+ coupled or visual questions).
+This skill gathers all clarification by **interviewing the user inline, one quiz-style question card per turn** — not by creating `{phase}-questions.md` files and waiting for `[Answer]:` tags. The card format, rhythm, reply parsing, and resolved view rules are defined in the **bundled quiz skill** at `aidlc-rules/quiz-skill.md`. See `aidlc-rules/aws-aidlc-rule-details/common/question-format-guide.md` for the aidlc-specific additions: the OVERRIDE clause, audit recording, escalation fallback, and GATE behaviour.
 
 ## Notes
 
