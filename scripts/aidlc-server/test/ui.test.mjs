@@ -68,12 +68,15 @@ test('copy-to-json is gone — Save is the export action', async (t) => {
 });
 
 test('Save persists JSON + records a user digest, and does NOT raise the unread badge', async (t) => {
-  const app = await openApp();
+  const app = await openApp({
+    clarify: { requirement: [{ t: 'Build it.' }], notes: [],
+      questions: [{ id: 'q1', n: 'Q1', topic: 'T', text: 'pick', kind: 'radio', options: ['First option', 'Second option'], answer: 0 }] },
+  });
   t.after(app.cleanup);
   const { page, ws } = app;
 
-  // Clarification is the default view; seed answer for q-cadence is index 0 — pick a different option
-  await page.locator('button:has-text("Per-customer anniversary")').first().click();
+  // Clarification is the default view; seeded answer is index 0 — pick the other option
+  await page.locator('button:has-text("Second option")').first().click();
   await page.locator('button', { hasText: /^Save$/ }).first().click();
   await page.waitForSelector('.toast', { timeout: 4000 });
   const toast = await page.locator('.toast').first().innerText();
@@ -85,7 +88,7 @@ test('Save persists JSON + records a user digest, and does NOT raise the unread 
   assert.equal(digests[0].actor, 'user');
   assert.equal(digests[0].workspace, 'clarify');
   const clarify = readWorkspaceDoc(ws, 'clarify');
-  assert.equal(clarify.questions.find(q => q.id === 'q-cadence').answer, 1, 'answer persisted as index 1');
+  assert.equal(clarify.questions.find(q => q.id === 'q1').answer, 1, 'answer persisted as index 1');
 
   // a user's own save must not badge them (badge counts agent replies only)
   await page.waitForTimeout(POLL_WAIT);

@@ -1,0 +1,123 @@
+{
+  "project": {
+    "name": "",
+    "repo": "",
+    "branch": "",
+    "version": ""
+  },
+  "clarify": {
+    "requirement": [],
+    "questions": [],
+    "notes": [],
+    "functional": [],
+    "nfrs": [],
+    "decisions": [],
+    "scope": {
+      "in": [],
+      "out": []
+    }
+  },
+  "stories": {
+    "intent": "",
+    "epics": [],
+    "cards": [],
+    "personas": []
+  },
+  "arch": {
+    "nodes": [],
+    "edges": [],
+    "units": []
+  },
+  "infra": {
+    "regions": [],
+    "resources": [],
+    "mode": "cloud",
+    "packaging": {
+      "platforms": [],
+      "artifact": "",
+      "signed": false,
+      "channels": []
+    },
+    "pipeline": {
+      "provider": "",
+      "stages": [],
+      "environments": []
+    }
+  },
+  "tests": {
+    "types": [],
+    "components": [],
+    "cells": {
+      "agg-0": {
+        "status": "",
+        "code": ""
+      },
+      "agg-1": {
+        "status": "",
+        "code": ""
+      },
+      "agg-2": {
+        "status": "",
+        "code": ""
+      },
+      "inv-0": {
+        "status": "",
+        "code": ""
+      },
+      "inv-1": {
+        "status": "",
+        "code": ""
+      },
+      "inv-2": {
+        "status": "",
+        "code": ""
+      },
+      "pay-0": {
+        "status": "",
+        "code": ""
+      },
+      "pay-1": {
+        "status": "",
+        "code": ""
+      },
+      "pay-2": {
+        "status": "",
+        "code": ""
+      },
+      "portal-0": {
+        "status": "",
+        "code": ""
+      },
+      "portal-1": {
+        "status": "",
+        "code": ""
+      },
+      "portal-2": {
+        "status": "",
+        "code": ""
+      }
+    },
+    "summary": {
+      "builds": [],
+      "businessRulesVerified": [],
+      "readyForOperations": false
+    }
+  },
+  "steering": {
+    "agents": {
+      "overview": "",
+      "techStack": "",
+      "repoStructure": "",
+      "buildAndRun": "",
+      "architectureDecisions": ""
+    },
+    "conventions": [],
+    "exceptions": []
+  },
+  "entities": {
+    "entities": []
+  },
+  "rules": {
+    "groups": []
+  }
+}

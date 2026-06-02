@@ -17,7 +17,7 @@ import (
 func setup(t *testing.T) string {
 	t.Helper()
 	docsDir = filepath.Join(t.TempDir(), "workspace")
-	if err := seedWorkspace(); err != nil {
+	if err := seedWorkspace(seedDefaults); err != nil {
 		t.Fatalf("seedWorkspace: %v", err)
 	}
 	return docsDir
@@ -63,7 +63,7 @@ func TestSeedDoesNotOverwriteExisting(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "project.json"), custom, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := seedWorkspace(); err != nil { // second seed must be a no-op for existing files
+	if err := seedWorkspace(seedDefaults); err != nil { // second seed must be a no-op for existing files
 		t.Fatal(err)
 	}
 	proj := readJSON(t, filepath.Join(dir, "project.json"))
@@ -288,6 +288,40 @@ func TestListenPerProjectPort(t *testing.T) {
 		t.Errorf("explicit port not honored: got %d want %d", got, want)
 	}
 	l2.Close()
+}
+
+func TestEmptyDefaultsHaveNoExampleContent(t *testing.T) {
+	// the production first-run seed must not leak demo content into real projects
+	for _, bad := range []string{"billing", "invoice", "Priya", "LinkVault", "usage"} {
+		if strings.Contains(strings.ToLower(string(emptyDefaults)), strings.ToLower(bad)) {
+			t.Errorf("empty-defaults.json leaks demo content: %q", bad)
+		}
+	}
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(emptyDefaults, &m); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range docs {
+		if _, ok := m[d]; !ok {
+			t.Errorf("empty defaults missing doc %q", d)
+		}
+	}
+	// seeding empty → blank clarify + a project name derived from the folder
+	docsDir = filepath.Join(t.TempDir(), "my-proj", "aidlc-docs", "workspace")
+	if err := os.MkdirAll(docsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := seedWorkspace(emptyDefaults); err != nil {
+		t.Fatal(err)
+	}
+	clarify := readJSON(t, filepath.Join(docsDir, "clarify.json"))
+	if qs, _ := clarify["questions"].([]any); len(qs) != 0 {
+		t.Errorf("empty-seeded clarify should have no questions, got %d", len(qs))
+	}
+	proj := readJSON(t, filepath.Join(docsDir, "project.json"))
+	if proj["name"] != "my-proj" {
+		t.Errorf("empty-seeded project name should be the folder 'my-proj', got %v", proj["name"])
+	}
 }
 
 func TestIsDoc(t *testing.T) {

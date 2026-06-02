@@ -37,6 +37,14 @@ import (
 //go:embed all:assets
 var assetsFS embed.FS
 
+// emptyDefaults seeds a REAL project's first run — blank scaffolds, no example content.
+//
+//go:embed empty-defaults.json
+var emptyDefaults []byte
+
+// seedDefaults is the billing-service DEMO — used only with -demo (showcase/dev) and by tests.
+// It must never seed a real project (that would leak example content into the user's docs).
+//
 //go:embed seed-defaults.json
 var seedDefaults []byte
 
@@ -69,6 +77,7 @@ func main() {
 	port := flag.Int("port", 0, "port to listen on (0 = auto: a stable per-project port, localhost only)")
 	docsFlag := flag.String("docs", "", "path to aidlc-docs/workspace (default: ./aidlc-docs/workspace)")
 	noOpen := flag.Bool("no-open", false, "do not auto-open the browser")
+	demo := flag.Bool("demo", false, "seed the billing-service DEMO instead of empty scaffolds (showcase/dev only)")
 	flag.Parse()
 
 	// Windows registry can mis-type these — set them explicitly.
@@ -85,7 +94,11 @@ func main() {
 		}
 		docsDir = filepath.Join(cwd, "aidlc-docs", "workspace")
 	}
-	if err := seedWorkspace(); err != nil {
+	defaults := emptyDefaults // real projects seed blank scaffolds; never the demo
+	if *demo {
+		defaults = seedDefaults
+	}
+	if err := seedWorkspace(defaults); err != nil {
 		log.Fatalf("seeding workspace: %v", err)
 	}
 
@@ -142,18 +155,22 @@ func listen(requested int, key string) net.Listener {
 
 // ---------------- state seeding ----------------
 
-func seedWorkspace() error {
+func seedWorkspace(defaults []byte) error {
 	if err := os.MkdirAll(filepath.Join(docsDir, ".snapshot"), 0o755); err != nil {
 		return err
 	}
 	var seed map[string]json.RawMessage
-	if err := json.Unmarshal(seedDefaults, &seed); err != nil {
-		return fmt.Errorf("parse seed-defaults: %w", err)
+	if err := json.Unmarshal(defaults, &seed); err != nil {
+		return fmt.Errorf("parse defaults: %w", err)
 	}
 	for _, d := range docs {
 		path := filepath.Join(docsDir, d+".json")
 		if _, err := os.Stat(path); errors.Is(err, fs.ErrNotExist) {
-			body := indent(seed[d])
+			raw := seed[d]
+			if d == "project" {
+				raw = withProjectName(raw) // fill name from the folder when blank (empty seed)
+			}
+			body := indent(raw)
 			if err := os.WriteFile(path, body, 0o644); err != nil {
 				return err
 			}
@@ -162,6 +179,24 @@ func seedWorkspace() error {
 		}
 	}
 	return nil
+}
+
+// withProjectName fills project.name from the project folder when the seed left it blank,
+// so a real (empty-seeded) project shows its own name rather than nothing.
+func withProjectName(raw json.RawMessage) json.RawMessage {
+	var p map[string]any
+	if err := json.Unmarshal(raw, &p); err != nil || p == nil {
+		return raw
+	}
+	if name, _ := p["name"].(string); name == "" {
+		// project root is the parent of aidlc-docs/ (which is the parent of docsDir)
+		p["name"] = filepath.Base(filepath.Dir(aidlcDocsRoot()))
+	}
+	out, err := json.Marshal(p)
+	if err != nil {
+		return raw
+	}
+	return out
 }
 
 // ---------------- handlers ----------------
