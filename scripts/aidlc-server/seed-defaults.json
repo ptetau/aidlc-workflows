@@ -745,95 +745,49 @@
     }
   },
   "steering": {
-    "groups": [
-      {
-        "id": "style",
-        "title": "Code style",
-        "rules": [
-          {
-            "id": "r1",
-            "label": "Semicolons required",
-            "on": true,
-            "kind": "toggle"
-          },
-          {
-            "id": "r2",
-            "label": "Single quotes for strings",
-            "on": true,
-            "kind": "toggle"
-          },
-          {
-            "id": "r3",
-            "label": "Max line length",
-            "on": true,
-            "kind": "slider",
-            "value": 100,
-            "min": 60,
-            "max": 140,
-            "step": 10
-          }
-        ]
-      },
-      {
-        "id": "arch",
-        "title": "Architecture",
-        "rules": [
-          {
-            "id": "r4",
-            "label": "Money as integer cents (no floats)",
-            "on": true,
-            "kind": "toggle"
-          },
-          {
-            "id": "r5",
-            "label": "All external calls must be idempotent",
-            "on": true,
-            "kind": "toggle"
-          },
-          {
-            "id": "r6",
-            "label": "Repository pattern for data access",
-            "on": false,
-            "kind": "toggle"
-          }
-        ]
-      },
-      {
-        "id": "naming",
-        "title": "Naming",
-        "rules": [
-          {
-            "id": "r7",
-            "label": "camelCase functions, PascalCase types",
-            "on": true,
-            "kind": "toggle"
-          },
-          {
-            "id": "r8",
-            "label": "Boolean names start with is/has/should",
-            "on": true,
-            "kind": "toggle"
-          }
-        ]
-      }
-    ],
-    "exceptions": [
-      {
-        "id": "x1",
-        "rule": "Max line length",
-        "scope": "src/migrations/**",
-        "note": "SQL strings exceed 100 cols"
-      }
-    ],
-    "sample": "function calc_total(items){\n  var total = 0.0\n  for(i=0;i<items.length;i++){\n    total = total + items[i].price\n  }\n  return total\n}",
     "agents": {
       "overview": "A usage-based billing service: charges customers per cycle, retries failed payments, and lets finance reconcile every cent.",
       "techStack": "Go services · Postgres 16 · Redis. REST APIs over mTLS.",
       "repoStructure": "services/<unit> per deployable unit · shared/ for cross-cutting · aidlc-docs/ for design artifacts.",
       "buildAndRun": "make build · make test · make run (see construction/build-and-test).",
-      "conventions": "Money in integer cents (no floats). All external calls idempotent. camelCase functions, PascalCase types.",
       "architectureDecisions": "USD-only at launch (multi-currency deferred to #1842). Aggregation uses idempotent 1h tumbling windows."
-    }
+    },
+    "conventions": [
+      {
+        "id": "c1",
+        "title": "Money as integer cents",
+        "rule": "Represent all money as integer cents; never use floating point for currency.",
+        "rationale": "Floats accumulate rounding errors that corrupt billing totals.",
+        "good": "const totalCents = items.reduce((s, i) => s + i.priceCents, 0)",
+        "bad": "let total = 0.0; for (const i of items) total += i.price // float drift",
+        "diagram": ""
+      },
+      {
+        "id": "c2",
+        "title": "External calls are idempotent",
+        "rule": "Every external call (payment, metering) must be safe to retry with an idempotency key.",
+        "rationale": "Retries are inevitable; non-idempotent calls double-charge or double-count.",
+        "good": "await charge(invoice, { idempotencyKey: invoice.id })",
+        "bad": "await charge(invoice) // retried → charged twice",
+        "diagram": "sequenceDiagram\n  Client->>API: charge(key=inv_1)\n  API->>API: seen key? no → charge\n  Client->>API: retry charge(key=inv_1)\n  API->>API: seen key? yes → no-op"
+      },
+      {
+        "id": "c3",
+        "title": "camelCase functions, PascalCase types",
+        "rule": "Functions and variables are camelCase; types and classes are PascalCase.",
+        "rationale": "Consistency across the codebase; matches the broader ecosystem.",
+        "good": "",
+        "bad": "",
+        "diagram": ""
+      }
+    ],
+    "exceptions": [
+      {
+        "rule": "Max line length",
+        "scope": "src/migrations/**",
+        "note": "Generated SQL strings exceed the limit; not worth wrapping."
+      }
+    ]
   },
   "entities": {
     "entities": [

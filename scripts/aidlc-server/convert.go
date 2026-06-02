@@ -377,45 +377,45 @@ func renderTests(b *strings.Builder, m map[string]any) {
 	}
 }
 
+// renderSteering produces the AGENTS.md document: orientation sections + conventions (rule,
+// rationale, good/bad examples, optional mermaid diagram) + project exceptions.
 func renderSteering(b *strings.Builder, m map[string]any) {
-	b.WriteString("# Steering\n\n")
-	for _, g := range asSlice(m["groups"]) {
-		gm := asMap(g)
-		fmt.Fprintf(b, "## %s\n\n", str(gm["title"]))
-		for _, r := range asSlice(gm["rules"]) {
-			rm := asMap(r)
-			mark := " "
-			if asBool(rm["on"]) {
-				mark = "x"
+	b.WriteString("# AGENTS.md\n\n")
+	ag := asMap(m["agents"])
+	for _, kv := range [][2]string{{"overview", "Project overview"}, {"techStack", "Tech stack"},
+		{"repoStructure", "Repository structure"}, {"buildAndRun", "Build & run"},
+		{"architectureDecisions", "Architecture decisions"}} {
+		if v := strings.TrimSpace(str(ag[kv[0]])); v != "" {
+			fmt.Fprintf(b, "## %s\n\n%s\n\n", kv[1], v)
+		}
+	}
+	if conv := asSlice(m["conventions"]); len(conv) > 0 {
+		b.WriteString("## Conventions\n\n")
+		for _, c := range conv {
+			cm := asMap(c)
+			fmt.Fprintf(b, "### %s\n\n", str(cm["title"]))
+			if v := strings.TrimSpace(str(cm["rule"])); v != "" {
+				fmt.Fprintf(b, "%s\n\n", v)
 			}
-			if str(rm["kind"]) == "slider" {
-				fmt.Fprintf(b, "- [%s] %s (slider: %s)\n", mark, str(rm["label"]), trimNum(num(rm["value"])))
-			} else {
-				fmt.Fprintf(b, "- [%s] %s\n", mark, str(rm["label"]))
+			if v := strings.TrimSpace(str(cm["rationale"])); v != "" {
+				fmt.Fprintf(b, "_Why: %s_\n\n", v)
+			}
+			if v := strings.TrimSpace(str(cm["good"])); v != "" {
+				b.WriteString("✅ Good\n```\n" + v + "\n```\n\n")
+			}
+			if v := strings.TrimSpace(str(cm["bad"])); v != "" {
+				b.WriteString("🚫 Avoid\n```\n" + v + "\n```\n\n")
+			}
+			if v := strings.TrimSpace(str(cm["diagram"])); v != "" {
+				b.WriteString("```mermaid\n" + v + "\n```\n\n")
 			}
 		}
-		b.WriteString("\n")
 	}
-	ex := asSlice(m["exceptions"])
-	if len(ex) > 0 {
-		b.WriteString("## Exceptions\n\n")
+	if ex := asSlice(m["exceptions"]); len(ex) > 0 {
+		b.WriteString("## Project exceptions\n\n")
 		for _, e := range ex {
 			em := asMap(e)
 			fmt.Fprintf(b, "- **%s** — `%s` — %s\n", str(em["rule"]), str(em["scope"]), str(em["note"]))
-		}
-		b.WriteString("\n")
-	}
-	if s := str(m["sample"]); s != "" {
-		b.WriteString("## Sample\n\n```\n" + s + "\n```\n")
-	}
-	if ag := asMap(m["agents"]); len(ag) > 0 {
-		b.WriteString("\n## AGENTS.md\n\n")
-		for _, kv := range [][2]string{{"overview", "Project overview"}, {"techStack", "Tech stack"},
-			{"repoStructure", "Repository structure"}, {"buildAndRun", "Build & run"},
-			{"conventions", "Key conventions"}, {"architectureDecisions", "Architecture decisions"}} {
-			if v := str(ag[kv[0]]); v != "" {
-				fmt.Fprintf(b, "### %s\n\n%s\n\n", kv[1], v)
-			}
 		}
 	}
 }

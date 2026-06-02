@@ -302,25 +302,31 @@ test('entities + business-rules workspaces: edit + persist', async (t) => {
   assert.deepEqual(page.__errors, []);
 });
 
-test('steering AGENTS.md tab: edit a section + persist', async (t) => {
+test('steering = AGENTS.md doc: edit overview + a convention, Preview renders, persist', async (t) => {
   const app = await openApp({
     project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },
-    steering: { groups: [], exceptions: [], sample: '', agents: { overview: 'A thing.', techStack: 'Go' } },
+    steering: { agents: { overview: 'A thing.', techStack: 'Go' },
+      conventions: [{ id: 'c1', title: 'Cents', rule: 'integer cents', rationale: 'no drift', good: 'a', bad: 'b', diagram: '' }],
+      exceptions: [] },
   });
   t.after(app.cleanup);
   const { page, ws } = app;
   await page.locator('nav button', { hasText: 'Steering' }).first().click();
-  await page.waitForTimeout(200);
-  await page.getByRole('button', { name: 'AGENTS.md' }).first().click();
   await page.waitForTimeout(300);
+  // no Rules tab anymore
+  assert.equal(await page.getByRole('button', { name: /^Rules$/ }).count(), 0, 'Rules tab gone');
   assert.ok(await page.getByText('Project overview').first().isVisible(), 'AGENTS sections shown');
-  // edit the overview textarea (first one) and save
-  const ta = page.locator('textarea').first();
-  await ta.fill('A usage-based billing service.');
+  assert.ok(await page.getByText('Conventions').first().isVisible(), 'conventions section shown');
+  // edit overview (first textarea) + save
+  await page.locator('textarea').first().fill('A usage-based billing service.');
   await page.getByRole('button', { name: /^Save$/ }).first().click();
   await page.waitForSelector('.toast', { timeout: 4000 });
   const sd = readWorkspaceDoc(ws, 'steering');
   assert.equal(sd.agents.overview, 'A usage-based billing service.', 'AGENTS content persisted');
+  // Preview renders the document
+  await page.getByRole('button', { name: /^Preview$/ }).first().click();
+  await page.waitForTimeout(300);
+  assert.ok(await page.locator('.doc-md h1').first().isVisible(), 'preview renders AGENTS.md');
   assert.deepEqual(page.__errors, []);
 });
 

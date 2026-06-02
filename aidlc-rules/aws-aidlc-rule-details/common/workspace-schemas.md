@@ -143,26 +143,29 @@ from the real build-and-test run; the UI does not execute tests). `summary` is t
 summary: per-component `builds` (`build` ∈ success/fail/pending, `coverage` %), the `businessRulesVerified`
 list, and the `readyForOperations` gate.
 
-## steering.json
+## steering.json  (the AGENTS.md document)
 ```json
 {
-  "groups": [
-    { "id": "style", "title": "Code style", "rules": [
-      { "id": "r1", "label": "Semicolons required", "on": true, "kind": "toggle" },
-      { "id": "r3", "label": "Max line length", "on": true, "kind": "slider", "value": 100, "min": 60, "max": 140, "step": 10 }
-    ] }
-  ],
-  "exceptions": [ { "id": "x1", "rule": "Max line length", "scope": "src/migrations/**", "note": "SQL strings exceed 100 cols" } ],
-  "sample": "function calc_total(items){ … }",
   "agents": {
     "overview": "…", "techStack": "…", "repoStructure": "…",
-    "buildAndRun": "…", "conventions": "…", "architectureDecisions": "…"
-  }
+    "buildAndRun": "…", "architectureDecisions": "…"
+  },
+  "conventions": [
+    { "id": "c1", "title": "Money as integer cents",
+      "rule": "Represent all money as integer cents; never floats.",
+      "rationale": "Floats accumulate rounding errors.",
+      "good": "const totalCents = …", "bad": "let total = 0.0 …",
+      "diagram": "" }
+  ],
+  "exceptions": [ { "rule": "Max line length", "scope": "src/migrations/**", "note": "generated SQL" } ]
 }
 ```
-`kind` ∈ `toggle | slider`. `sample` is a representative code snippet (carried through). `agents`
-holds the **AGENTS.md** content (the root steering doc) section-by-section — keep it consistent with
-the rules; it is what `AGENTS.md` is generated from. Each `agents.*` field may contain markdown.
+Steering is the **AGENTS.md** document (the root AI steering doc). `agents.*` are its orientation
+sections (markdown allowed). `conventions` are the standards every agent must follow — each a `rule`
+with `rationale`, a `good`/`bad` code example, and an optional `diagram` (mermaid source, rendered in
+Preview / on GitHub). `exceptions` are project-scoped carve-outs. `renderSteering` produces AGENTS.md;
+the workspace's Preview is the same rendered view (which `steering.html` would be). **There is no
+on/off rule-toggle model** — conventions are documented standards, not switches.
 
 ## entities.json  (Functional Design · domain entities)
 ```json

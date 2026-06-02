@@ -88,7 +88,9 @@ func TestRoundTripEdgeCases(t *testing.T) {
 		"arch":     `{"nodes":[{"id":"n1","type":"api","label":"L","x":80,"y":70,"fields":[]}],"edges":[]}`,
 		"infra":    `{"regions":[],"resources":[],"notes":{}}`,
 		"tests":    `{"types":["Unit"],"components":[{"id":"c","name":"C"}],"cells":{"c-0":{"status":"none","code":""}}}`,
-		"steering": `{"groups":[{"id":"g","title":"G","rules":[{"id":"r","label":"L","on":false,"kind":"slider","value":120,"min":60,"max":140,"step":10}]}],"exceptions":[],"sample":"x = 1"}`,
+		"steering": `{"agents":{"overview":"An app.","techStack":"Go"},
+			"conventions":[{"id":"c","title":"Cents","rule":"integer cents","rationale":"no float drift","good":"x","bad":"y","diagram":"sequenceDiagram\n  A->>B: charge"}],
+			"exceptions":[{"rule":"line length","scope":"src/**","note":"sql"}]}`,
 		"project":  `{"name":"X","repo":"o/x","branch":"main","version":"v2"}`,
 	}
 	for docType, js := range cases {
