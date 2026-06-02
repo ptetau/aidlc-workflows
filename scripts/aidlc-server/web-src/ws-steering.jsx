@@ -9,7 +9,7 @@ function SteeringWS() {
   const [exceptions, setExceptions] = pUseState(seed.exceptions || []);
   const [adding, setAdding] = pUseState(false);
   const [exDraft, setExDraft] = pUseState({ rule: '', scope: '', note: '' });
-  const [tab, setTab] = pUseState('rules'); // rules | agents
+  const [tab, setTab] = pUseState('agents'); // agents (the real steering artifact) | rules (governance layer)
   const [agents, setAgents] = pUseState(() => seed.agents || {});
 
   const allRules = groups.flatMap(g => g.rules);
@@ -28,7 +28,7 @@ function SteeringWS() {
           ? 'The standards every agent must follow when building this project. Toggle rules and record project-specific exceptions.'
           : 'The AI steering document written to the project root — what an agent reads first to orient.'}
         right={<>
-          <Segmented options={[{ value: 'rules', label: 'Rules' }, { value: 'agents', label: 'AGENTS.md' }]} value={tab} onChange={setTab} />
+          <Segmented options={[{ value: 'agents', label: 'AGENTS.md' }, { value: 'rules', label: 'Rules' }]} value={tab} onChange={setTab} />
           {tab === 'rules' && <span className="pill pill-clay">{activeCount} active rules</span>}
           <Btn kind="primary" icon={I.check} onClick={() => save('steering', buildState())}>Save</Btn>
         </>} />
