@@ -49,7 +49,6 @@ function SteeringWS() {
   const updE = (i, patch) => setExceptions(exceptions.map((e, j) => j === i ? { ...e, ...patch } : e));
   const fs = { fontSize: 12.5, padding: '7px 9px' };
 
-  const rendered = window.marked ? window.marked.parse(steeringMarkdown(agents, conventions, exceptions)) : '';
 
   return (
     <>
@@ -63,7 +62,7 @@ function SteeringWS() {
 
       {view === 'preview' ? (
         <div className="scroll fadein" style={{ flex: 1, minHeight: 0, padding: '24px 32px' }}>
-          <div className="doc-md" dangerouslySetInnerHTML={{ __html: rendered }} />
+          <MarkdownDoc markdown={steeringMarkdown(agents, conventions, exceptions)} />
         </div>
       ) : (
         <div className="scroll fadein" style={{ flex: 1, minHeight: 0, padding: '18px 28px 28px', display: 'flex', flexDirection: 'column', gap: 22, maxWidth: 860 }}>

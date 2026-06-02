@@ -148,6 +148,7 @@ function DocumentsWS() {
   const [loading, setLoading] = mUseState(false);
   const [editing, setEditing] = mUseState(false);
   const [draft, setDraft] = mUseState('');
+  const [pendingAnchor, setPendingAnchor] = mUseState('');
   const push = useToast();
 
   mUseEffect(() => { fetch('/api/docs').then(r => r.json()).then(setDocs).catch(() => setDocs([])); }, []);
@@ -157,6 +158,14 @@ function DocumentsWS() {
     fetch('/api/doc?path=' + encodeURIComponent(sel)).then(r => r.text())
       .then(t => { setBody(t); setLoading(false); }).catch(() => { setBody('*(could not load)*'); setLoading(false); });
   }, [sel]);
+
+  // follow a `*.md` link inside a rendered doc → load that doc (resolved relative to the current one) + scroll
+  const openDocByPath = (href, anchor) => {
+    const target = resolveDocHref(sel || '', href);
+    const match = (docs || []).find(d => d.path === target) || (docs || []).find(d => d.path.endsWith('/' + href) || d.path === href);
+    if (match) { setPendingAnchor(anchor || ''); setSel(match.path); }
+    else push(<><span className="tdot" style={{ background: 'var(--amber)' }}></span><span>No such doc: <code>{href}</code></span></>);
+  };
 
   const selDoc = (docs || []).find(d => d.path === sel);
   const saveDoc = () => {
@@ -170,7 +179,6 @@ function DocumentsWS() {
   const groups = {};
   (docs || []).forEach(d => { (groups[d.dir] = groups[d.dir] || []).push(d); });
   const dirs = Object.keys(groups).sort();
-  const rendered = window.marked ? window.marked.parse(body || '') : ('<pre>' + (body || '') + '</pre>');
 
   return (
     <>
@@ -214,7 +222,7 @@ function DocumentsWS() {
           <div className="scroll" style={{ flex: 1, minHeight: 0, padding: editing ? 0 : '24px 32px' }}>
             {!sel && <div className="muted" style={{ padding: '60px 10px', textAlign: 'center', fontSize: 13.5 }}>Select a document.</div>}
             {sel && loading && <div className="muted" style={{ padding: 24 }}>Loading…</div>}
-            {sel && !loading && !editing && <div className="doc-md" dangerouslySetInnerHTML={{ __html: rendered }} />}
+            {sel && !loading && !editing && <MarkdownDoc markdown={body} onOpenDoc={openDocByPath} scrollAnchor={pendingAnchor} />}
             {sel && !loading && editing && (
               <textarea className="mono" spellCheck={false} value={draft} onChange={e => setDraft(e.target.value)}
                 style={{ width: '100%', height: '100%', minHeight: 400, border: 'none', outline: 'none', resize: 'none', padding: '20px 32px', fontSize: 12.5, lineHeight: 1.7, background: 'var(--surface)', color: 'var(--ink)' }} />
@@ -233,14 +241,13 @@ function AuditWS() {
     fetch('/api/doc?path=' + encodeURIComponent('audit.md'))
       .then(r => r.ok ? r.text() : null).then(setBody).catch(() => setBody(null));
   }, []);
-  const rendered = (body && window.marked) ? window.marked.parse(body) : '';
   return (
     <>
       <WorkHeader eyebrow="Audit" title="The trail"
         desc="The verbatim, append-only audit log (aidlc-docs/audit.md) — every interaction and decision, recorded by the agent. Distinct from the Digest, which is the editable change-conversation." />
       <div className="scroll" style={{ flex: 1, minHeight: 0, padding: '24px 32px' }}>
         {body === null && <div className="muted" style={{ fontSize: 13.5 }}>No <code>audit.md</code> yet — it’s written as the workflow runs.</div>}
-        {body !== null && <div className="doc-md" dangerouslySetInnerHTML={{ __html: rendered }} />}
+        {body !== null && <MarkdownDoc markdown={body} />}
       </div>
     </>
   );

@@ -202,6 +202,32 @@ test('Documents: edit a prose doc → writes markdown + ledger entry; engine doc
   assert.deepEqual(page.__errors, []);
 });
 
+test('Documents links: heading anchors + in-page scroll + cross-doc load', async (t) => {
+  const app = await openApp();
+  t.after(app.cleanup);
+  const root = dirname(app.ws);
+  const { mkdirSync } = await import('node:fs');
+  mkdirSync(join(root, 'inception', 'requirements'), { recursive: true });
+  // doc A links to a heading in itself and to doc B
+  writeFileSync(join(root, 'inception', 'requirements', 'requirements.md'),
+    '# Requirements\n\n[jump to scope](#scope)\n\nsee also [stories](../user-stories/stories.md)\n\n## Scope\n\nthe scope text\n');
+  mkdirSync(join(root, 'inception', 'user-stories'), { recursive: true });
+  writeFileSync(join(root, 'inception', 'user-stories', 'stories.md'), '# Stories\n\nstory content here\n');
+  const { page } = app;
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('nav button', { hasText: 'Documents' }).first().click();
+  await page.waitForTimeout(300);
+  await page.getByText('requirements.md').first().click();
+  await page.waitForTimeout(300);
+  // headings get id anchors
+  assert.equal(await page.locator('.doc-md #scope').count(), 1, 'heading has a slug id anchor');
+  // cross-doc .md link loads the other doc
+  await page.getByRole('link', { name: 'stories' }).first().click();
+  await page.waitForTimeout(400);
+  assert.ok(await page.getByText('story content here').first().isVisible(), 'cross-doc link loaded the target doc');
+  assert.deepEqual(page.__errors, []);
+});
+
 test('Overview gate: Approve records a gate event in the ledger', async (t) => {
   const app = await openApp();
   t.after(app.cleanup);

@@ -175,4 +175,56 @@ function WorkHeader({ title, eyebrow, desc, right }) {
   );
 }
 
-Object.assign(window, { I, ToastProvider, useToast, useCopyJSON, saveWorkspace, useSave, Btn, Modal, Switch, Segmented, WorkHeader });
+/* ---------------- MARKDOWN DOC (rendered, with working anchors + links) ----------------
+   Renders markdown via marked, gives every heading a slug id (so #anchor links resolve),
+   smooth-scrolls in-page `#` links, and (when onOpenDoc is given) routes `*.md` links to load
+   that doc. `scrollAnchor` scrolls to an anchor once after render (for cross-doc deep links). */
+function slugify(s) {
+  return (s || '').toLowerCase().trim().replace(/[`'"]/g, '').replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '');
+}
+function MarkdownDoc({ markdown, onOpenDoc, scrollAnchor }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.innerHTML = window.marked ? window.marked.parse(markdown || '') : ('<pre>' + (markdown || '') + '</pre>');
+    // give headings stable ids so in-page anchors work
+    el.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(h => { if (!h.id) h.id = slugify(h.textContent); });
+    const scrollToId = (id) => {
+      let t = null;
+      try { t = el.querySelector('#' + (window.CSS && CSS.escape ? CSS.escape(id) : id)); } catch (e) { t = null; }
+      if (!t) el.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(h => { if (!t && h.id.toLowerCase() === id.toLowerCase()) t = h; });
+      if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return !!t;
+    };
+    const onClick = (e) => {
+      const a = e.target.closest('a');
+      if (!a) return;
+      const href = a.getAttribute('href') || '';
+      if (href.startsWith('#')) { e.preventDefault(); scrollToId(decodeURIComponent(href.slice(1))); }
+      else if (/\.md(\?|#|$)/i.test(href) && onOpenDoc && !/^https?:/i.test(href)) {
+        e.preventDefault();
+        const [path, anchor] = href.split('#');
+        onOpenDoc(path, anchor || '');
+      }
+      // external (http) links fall through to default behaviour
+    };
+    el.addEventListener('click', onClick);
+    if (scrollAnchor) { const id = setTimeout(() => scrollToId(scrollAnchor), 60); return () => { el.removeEventListener('click', onClick); clearTimeout(id); }; }
+    return () => el.removeEventListener('click', onClick);
+  }, [markdown, scrollAnchor]);
+  return <div className="doc-md" ref={ref} />;
+}
+
+// resolve a doc-relative href (e.g. "../requirements/x.md") against a base doc path → aidlc-docs-rel path
+function resolveDocHref(baseDocPath, href) {
+  href = (href || '').replace(/^\.\//, '');
+  if (href.startsWith('/')) return href.replace(/^\/+/, '');
+  const baseDir = baseDocPath.includes('/') ? baseDocPath.slice(0, baseDocPath.lastIndexOf('/')) : '';
+  const parts = (baseDir ? baseDir.split('/') : []).concat(href.split('/'));
+  const out = [];
+  for (const p of parts) { if (p === '..') out.pop(); else if (p && p !== '.') out.push(p); }
+  return out.join('/');
+}
+
+Object.assign(window, { I, ToastProvider, useToast, useCopyJSON, saveWorkspace, useSave, Btn, Modal, Switch, Segmented, WorkHeader, MarkdownDoc, slugify, resolveDocHref });
