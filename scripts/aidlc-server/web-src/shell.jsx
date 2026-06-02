@@ -19,6 +19,8 @@ const NAV_GROUPS = [
 const OVERVIEW = { id: 'overview', label: 'Overview', icon: I.star, hue: 'var(--ink-soft)' };
 const DOCUMENTS = { id: 'documents', label: 'Documents', icon: I.note, hue: 'var(--ink-soft)' };
 const AUDIT = { id: 'audit', label: 'Audit', icon: I.search, hue: 'var(--ink-soft)' };
+const VALID_VIEWS = WORKSPACES.map(w => w.id).concat(['overview', 'documents', 'audit']);
+const registryHas = id => VALID_VIEWS.includes(id);
 // which aidlc-state.md stage each editable workspace corresponds to (for status dots)
 const STAGE_OF = {
   clarify: 'Requirements Analysis', stories: 'User Stories', arch: 'Application Design',
@@ -282,6 +284,18 @@ function AppShell() {
   // read-only engine state (parsed aidlc-state.md) — for nav status dots + the Overview view
   const [stages, setStages] = useState(null);
   useEffect(() => { fetch('/api/project').then(r => r.json()).then(p => setStages(p.stages || [])).catch(() => {}); }, []);
+
+  // cross-workspace traceability navigation: aidlcGoto(ws, tab, anchor) + #ws/tab/anchor deep links
+  useEffect(() => {
+    window.aidlcGoto = (ws, tab, anchor) => {
+      window.__aidlcPendingNav = { tab, anchor };
+      setActive(ws);
+      try { history.replaceState(null, '', '#' + [ws, tab, anchor].filter(Boolean).join('/')); } catch (e) {}
+    };
+    const h = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+    if (h) { const [ws, tab, anchor] = h.split('/'); if (registryHas(ws)) { window.__aidlcPendingNav = { tab, anchor }; setActive(ws); } }
+    return () => { try { delete window.aidlcGoto; } catch (e) { window.aidlcGoto = undefined; } };
+  }, []);
 
   const registry = {
     clarify: window.ClarifyWS, stories: window.StoriesWS, arch: window.ArchWS,

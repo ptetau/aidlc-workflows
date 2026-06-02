@@ -227,4 +227,46 @@ function resolveDocHref(baseDocPath, href) {
   return out.join('/');
 }
 
-Object.assign(window, { I, ToastProvider, useToast, useCopyJSON, saveWorkspace, useSave, Btn, Modal, Switch, Segmented, WorkHeader, MarkdownDoc, slugify, resolveDocHref });
+/* ---------------- CROSS-WORKSPACE NAVIGATION (traceability links) ----------------
+   Items carry data-anchor="<id>"; a ref chip calls window.aidlcGoto(ws, tab, anchor), which the
+   AppShell turns into "switch workspace + (optional) sub-tab + scroll to the item + flash it".
+   Pure UX over IDs already in the JSON — no data/ledger change. */
+function scrollToAnchor(anchor, tries) {
+  if (!anchor) return;
+  let n = 0;
+  const max = tries || 25;
+  const find = () => Array.from(document.querySelectorAll('[data-anchor]')).find(e => e.getAttribute('data-anchor') === anchor);
+  const tick = () => {
+    const el = find();
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('anchor-flash');
+      setTimeout(() => el.classList.remove('anchor-flash'), 1600);
+    } else if (n++ < max) {
+      setTimeout(tick, 60);
+    }
+  };
+  tick();
+}
+// workspaces call this on mount to honour a pending navigation (switch sub-tab, scroll to anchor)
+function usePendingNav(applyTab) {
+  useEffect(() => {
+    const nav = window.__aidlcPendingNav;
+    if (!nav) return;
+    window.__aidlcPendingNav = null;
+    if (nav.tab && applyTab) applyTab(nav.tab);
+    scrollToAnchor(nav.anchor);
+  }, []);
+}
+// a clickable traceability reference (e.g. an FR id on a business rule)
+function RefChip({ children, ws, tab, anchor, title }) {
+  return (
+    <button onClick={(e) => { e.stopPropagation(); if (window.aidlcGoto) window.aidlcGoto(ws, tab, anchor); }}
+      className="mono" title={title || ('Go to ' + anchor)} style={{
+        border: '1px solid var(--primary-line)', background: 'var(--primary-wash)', color: 'var(--primary-deep)',
+        cursor: 'pointer', borderRadius: 7, padding: '2px 8px', fontSize: 10.5, fontWeight: 600, whiteSpace: 'nowrap',
+      }}>{children}</button>
+  );
+}
+
+Object.assign(window, { I, ToastProvider, useToast, useCopyJSON, saveWorkspace, useSave, Btn, Modal, Switch, Segmented, WorkHeader, MarkdownDoc, slugify, resolveDocHref, usePendingNav, scrollToAnchor, RefChip });

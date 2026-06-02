@@ -305,6 +305,27 @@ test('stories Personas + Map tabs: edit persona, toggle RBAC, persist', async (t
   assert.deepEqual(page.__errors, []);
 });
 
+test('traceability link: BR trace → Clarification Requirements tab + scroll to the FR', async (t) => {
+  const app = await openApp({
+    project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },
+    clarify: { requirement: [{ t: 'x' }], questions: [], notes: [],
+      functional: [{ id: 'FR-007', text: 'do the thing' }], nfrs: [], decisions: [], scope: { in: [], out: [] } },
+    rules: { groups: [{ title: 'G', rules: [{ id: 'BR-001', text: 'a rule', traces: ['FR-007'] }] }] },
+  });
+  t.after(app.cleanup);
+  const { page } = app;
+  await page.locator('nav button', { hasText: 'Business rules' }).first().click();
+  await page.waitForTimeout(300);
+  // click the FR-007 trace chip → should jump to Clarification, Requirements tab, FR-007 row
+  await page.getByRole('button', { name: 'FR-007' }).first().click();
+  await page.waitForTimeout(700);
+  assert.equal(await page.locator('h1', { hasText: 'Requirements' }).count(), 1, 'switched to Requirements tab');
+  const fr = page.locator('[data-anchor="FR-007"]');
+  assert.equal(await fr.count(), 1, 'FR-007 anchor present in clarify');
+  assert.ok(await fr.first().isVisible(), 'FR-007 row visible after navigation');
+  assert.deepEqual(page.__errors, []);
+});
+
 test('entities + business-rules workspaces: edit + persist', async (t) => {
   const app = await openApp({
     project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },

@@ -218,6 +218,14 @@ input[type="range"].range::-moz-range-thumb { width: 15px; height: 15px; border-
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
+/* ---- traceability link target highlight ---- */
+.anchor-flash { animation: anchorFlash 1.6s ease; border-radius: 9px; }
+@keyframes anchorFlash {
+  0% { box-shadow: 0 0 0 3px var(--primary); }
+  60% { box-shadow: 0 0 0 3px var(--primary-line); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
 /* ---- rendered markdown (Documents view) ---- */
 .doc-md { max-width: 760px; color: var(--ink); font-size: 14px; line-height: 1.7; }
 .doc-md h1, .doc-md h2, .doc-md h3 { font-family: 'Newsreader', Georgia, serif; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; margin: 1.4em 0 0.5em; }

@@ -96,6 +96,7 @@ function RulesWS() {
   const updR = (gi, ri, patch) => updG(gi, { rules: groups[gi].rules.map((r, j) => j === ri ? { ...r, ...patch } : r) });
   const count = groups.reduce((n, g) => n + (g.rules || []).length, 0);
   const fs = { fontSize: 12, padding: '6px 8px' };
+  usePendingNav(); // BR rows are link targets (BR-* anchors)
 
   return (
     <>
@@ -118,10 +119,16 @@ function RulesWS() {
             <div className="card" style={{ overflow: 'hidden' }}>
               {(g.rules || []).length === 0 && <div className="muted" style={{ padding: '10px 14px', fontSize: 12.5 }}>No rules.</div>}
               {(g.rules || []).map((r, ri) => (
-                <div key={ri} style={{ display: 'flex', gap: 8, padding: '10px 13px', borderTop: ri ? '1px solid var(--line)' : 'none', alignItems: 'flex-start' }}>
+                <div key={ri} data-anchor={r.id} style={{ display: 'flex', gap: 8, padding: '10px 13px', borderTop: ri ? '1px solid var(--line)' : 'none', alignItems: 'flex-start' }}>
                   <input className="input mono" value={r.id} onChange={e => updR(gi, ri, { id: e.target.value })} style={{ ...fs, flex: '0 0 90px', fontWeight: 600 }} />
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
                     <textarea className="textarea" rows={Math.max(2, (r.text || '').split('\n').length)} value={r.text} placeholder="The system must…" onChange={e => updR(gi, ri, { text: e.target.value })} style={{ ...fs, lineHeight: 1.5 }} />
+                    {(r.traces || []).length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span className="mono" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>traces →</span>
+                        {(r.traces || []).map((tr, ti) => <RefChip key={ti} ws="clarify" tab="requirements" anchor={tr}>{tr}</RefChip>)}
+                      </div>
+                    )}
                     <input className="input mono" value={(r.traces || []).join(', ')} placeholder="traces: FR-001, FR-002" onChange={e => updR(gi, ri, { traces: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} style={{ fontSize: 10.5, padding: '5px 8px', color: 'var(--ink-soft)' }} />
                   </div>
                   <button onClick={() => updG(gi, { rules: g.rules.filter((_, j) => j !== ri) })} style={{ flex: '0 0 20px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-faint)' }}><span style={{ width: 12, height: 12, display: 'flex' }}>{I.x}</span></button>

@@ -26,6 +26,7 @@ function ClarifyWS() {
   const cardRefs = cUseRef({});
   // P1: the structured requirements document (FR / NFR / decisions / scope)
   const [tab, setTab] = cUseState('clarify');
+  usePendingNav(setTab); // arrive from a traceability link → switch to the right tab + scroll
   const [functional, setFunctional] = cUseState(() => seed.functional || []);
   const [nfrs, setNfrs] = cUseState(() => seed.nfrs || []);
   const [decisions, setDecisions] = cUseState(() => seed.decisions || []);
@@ -256,7 +257,7 @@ function ClarifyRequirements({ functional, setFunctional, nfrs, setNfrs, decisio
       <Section title="Functional requirements" onAdd={() => setFunctional([...functional, { id: 'FR-' + String(functional.length + 1).padStart(3, '0'), text: '' }])}>
         {functional.length === 0 && <Empty>No functional requirements yet.</Empty>}
         {functional.map((f, i) => (
-          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          <div key={i} data-anchor={f.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
             <input className="input mono" value={f.id} onChange={e => upd(functional, setFunctional, i, { id: e.target.value })} style={{ ...fieldStyle, flex: '0 0 110px' }} />
             <textarea className="textarea" rows={1} value={f.text} placeholder="The system must…" onChange={e => upd(functional, setFunctional, i, { text: e.target.value })} style={{ ...fieldStyle, flex: 1 }} />
             <DelBtn onClick={() => del(functional, setFunctional, i)} />

@@ -21,6 +21,7 @@ function ArchWS() {
   const [sel, setSel] = aUseState(null);
   const [conn, setConn] = aUseState(null); // {from, x, y} live connection
   const [tab, setTab] = aUseState('topology'); // topology | units
+  usePendingNav(setTab); // arrive from a story→unit link → open Units + scroll
   const [units, setUnits] = aUseState(() => seed.units || []);
   const wrapRef = aUseRef(null);
   const drag = aUseRef(null);
@@ -304,7 +305,7 @@ function ArchUnits({ units, setUnits, nodes }) {
         {[...units].sort((a, b) => (a.buildOrder || 0) - (b.buildOrder || 0)).map((u) => {
           const i = units.indexOf(u);
           return (
-            <div key={u.id || i} className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div key={u.id || i} data-anchor={u.id} className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span className="mono" title="build order" style={{ flex: '0 0 34px', height: 30, borderRadius: 8, background: 'var(--surface-3)', color: 'var(--ink-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12 }}>#{u.buildOrder || '?'}</span>
                 <input className="input serif" value={u.name} onChange={e => upd(i, { name: e.target.value })} style={{ fontSize: 15, fontWeight: 500 }} />
@@ -337,6 +338,11 @@ function ArchUnits({ units, setUnits, nodes }) {
               {/* story map */}
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span className="eyebrow">Stories delivered (ids, comma-separated)</span>
+                {(u.stories || []).length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
+                    {(u.stories || []).map((sid, si) => <RefChip key={si} ws="stories" tab="backlog" anchor={sid}>{sid}</RefChip>)}
+                  </div>
+                )}
                 <input className="input mono" value={(u.stories || []).join(', ')} placeholder="US-AGG-001, US-AGG-002"
                   onChange={e => upd(i, { stories: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} style={{ fontSize: 11.5, padding: '7px 9px' }} />
               </label>

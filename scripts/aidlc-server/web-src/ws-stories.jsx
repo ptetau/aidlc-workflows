@@ -44,6 +44,7 @@ function StoriesWS() {
   const [filter, setFilter] = sUseState('all');
   const [open, setOpen] = sUseState(null); // expanded story id
   const [tab, setTab] = sUseState('backlog'); // backlog | personas | map
+  usePendingNav(setTab); // arrive from a unit→story link → open Backlog + scroll to the story
 
   const epicOf = id => seed.epics.find(e => e.id === id) || { title: 'No epic', color: 'var(--ink-faint)' };
   const update = (id, patch) => setCards(cs => cs.map(c => c.id === id ? { ...c, ...patch } : c));
@@ -148,13 +149,17 @@ function StoriesWS() {
 function StoryRow({ card, epicColor, first, expanded, onToggle, onChange, onDelete, personas }) {
   const r = readiness(card);
   const setCrit = next => onChange({ criteria: next });
+  // back-link: which unit delivers this story (read from the loaded arch state)
+  const units = (window.SEED.arch && window.SEED.arch.units) || [];
+  const unit = units.find(u => (u.stories || []).includes(card.code) || (u.stories || []).includes(card.id));
   return (
-    <div style={{ borderTop: first ? 'none' : '1px solid var(--line)' }}>
+    <div data-anchor={card.code || card.id} style={{ borderTop: first ? 'none' : '1px solid var(--line)' }}>
       {/* summary row */}
       <div onClick={onToggle} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', cursor: 'pointer' }}>
         <span style={{ width: 13, height: 13, display: 'flex', color: 'var(--ink-faint)', transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform .14s' }}>{I.chevR}</span>
         <span style={{ width: 4, height: 16, borderRadius: 2, background: epicColor, flex: '0 0 4px' }}></span>
         <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.title}</span>
+        {unit && <RefChip ws="arch" tab="units" anchor={unit.id} title={'Unit: ' + unit.name}>unit: {unit.name}</RefChip>}
         <span className={`pill pill-${card.human ? 'amber' : 'neutral'}`} style={{ fontSize: 9.5 }}>
           {card.human ? 'human' : 'agent'}
         </span>
