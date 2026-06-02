@@ -100,19 +100,27 @@ references `epics[].id`. There is **no** sprint board / column model.
 (node ids), owns a `buildOrder` + deployment profile (`workload`/`datastore`/`port`), and lists the
 story ids it delivers (`stories` — the **story→unit map**).
 
-## infra.json
+## infra.json  (mode-aware: cloud · cicd · standalone)
 ```json
 {
+  "mode": "cloud",
   "regions": [ { "id": "us-east", "label": "us-east-1", "on": true } ],
-  "resources": [
-    { "id": "db", "type": "db", "label": "Postgres (primary)", "multiAz": true, "public": true, "encrypted": false }
-  ],
-  "notes": { "db": "Override rationale text." }
+  "resources": [ { "id": "db", "type": "db", "label": "Postgres", "multiAz": true, "public": true, "encrypted": false } ],
+  "notes": { "db": "Override rationale text." },
+  "packaging": { "platforms": ["linux","macos"], "artifact": "single binary", "signed": false, "channels": ["GitHub Releases"] },
+  "pipeline": { "provider": "GitHub Actions", "stages": ["build","test","deploy"], "environments": ["staging","production"] }
 }
 ```
-`type` ∈ `compute | lb | db | cache`. Per-type fields: compute `{min,max,cpu,public}`,
-lb `{tls,public}`, db `{multiAz,public,encrypted}`, cache `{public,encrypted}`. The UI runs a live
-security validator over these (e.g. public+unencrypted db = HIGH). `notes` maps resource id → text.
+`mode` selects the delivery model (mirrors how AIDLC adapts to the project):
+- **cloud** (new infra): `regions` + `resources` (`type` ∈ `compute|lb|db|cache`; compute `{min,max,cpu,public}`,
+  lb `{tls,public}`, db `{multiAz,public,encrypted}`, cache `{public,encrypted}`). Live security
+  validator (public+unencrypted db = HIGH). `notes` maps resource id → text.
+- **cicd** (existing infra, deploy via pipeline): `pipeline` `{provider, stages[], environments[]}`.
+- **standalone** (executable, no cloud): `packaging` `{platforms[], artifact, signed, channels[]}`.
+
+All sections are carried through on save; only the active `mode`'s section is shown and validated.
+Set `mode` to match Infrastructure Design's findings (or `standalone`/`cicd` when there's no new
+cloud infra to provision).
 
 ## tests.json
 ```json

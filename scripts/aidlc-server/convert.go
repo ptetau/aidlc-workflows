@@ -286,19 +286,44 @@ func joinAny(items []any) string {
 }
 
 func renderInfra(b *strings.Builder, m map[string]any) {
-	b.WriteString("# Infrastructure\n\n## Regions\n\n")
-	for _, r := range asSlice(m["regions"]) {
-		rm := asMap(r)
-		state := "off"
-		if asBool(rm["on"]) {
-			state = "on"
-		}
-		fmt.Fprintf(b, "- %s (%s)\n", str(rm["label"]), state)
+	mode := str(m["mode"])
+	if mode == "" {
+		mode = "cloud"
 	}
-	b.WriteString("\n## Resources\n\n")
-	for _, r := range asSlice(m["resources"]) {
-		rm := asMap(r)
-		fmt.Fprintf(b, "- `%s` (%s) — %s\n", str(rm["id"]), str(rm["type"]), str(rm["label"]))
+	fmt.Fprintf(b, "# Infrastructure & Delivery\n\n_Mode: %s_\n\n", mode)
+	switch mode {
+	case "standalone":
+		p := asMap(m["packaging"])
+		b.WriteString("## Packaging & distribution\n\n")
+		fmt.Fprintf(b, "- platforms: %s\n", joinAny(asSlice(p["platforms"])))
+		fmt.Fprintf(b, "- artifact: %s\n", str(p["artifact"]))
+		signed := "no"
+		if asBool(p["signed"]) {
+			signed = "yes"
+		}
+		fmt.Fprintf(b, "- code-signed: %s\n", signed)
+		fmt.Fprintf(b, "- channels: %s\n", joinAny(asSlice(p["channels"])))
+	case "cicd":
+		p := asMap(m["pipeline"])
+		b.WriteString("## Deployment pipeline\n\n")
+		fmt.Fprintf(b, "- provider: %s\n", str(p["provider"]))
+		fmt.Fprintf(b, "- stages: %s\n", joinAny(asSlice(p["stages"])))
+		fmt.Fprintf(b, "- environments: %s\n", joinAny(asSlice(p["environments"])))
+	default: // cloud
+		b.WriteString("## Regions\n\n")
+		for _, r := range asSlice(m["regions"]) {
+			rm := asMap(r)
+			state := "off"
+			if asBool(rm["on"]) {
+				state = "on"
+			}
+			fmt.Fprintf(b, "- %s (%s)\n", str(rm["label"]), state)
+		}
+		b.WriteString("\n## Resources\n\n")
+		for _, r := range asSlice(m["resources"]) {
+			rm := asMap(r)
+			fmt.Fprintf(b, "- `%s` (%s) — %s\n", str(rm["id"]), str(rm["type"]), str(rm["label"]))
+		}
 	}
 }
 

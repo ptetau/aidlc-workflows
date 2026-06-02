@@ -324,6 +324,29 @@ test('steering AGENTS.md tab: edit a section + persist', async (t) => {
   assert.deepEqual(page.__errors, []);
 });
 
+test('infra modes: switch to Standalone, edit packaging, persist', async (t) => {
+  const app = await openApp({
+    project: { name: 'CLI', repo: 'o/cli', branch: 'main', version: 'v1' },
+    infra: { mode: 'cloud', regions: [], resources: [], notes: {},
+      packaging: { platforms: [], artifact: '', signed: false, channels: [] },
+      pipeline: { provider: '', stages: [], environments: [] } },
+  });
+  t.after(app.cleanup);
+  const { page, ws } = app;
+  await page.locator('nav button', { hasText: 'Infrastructure' }).first().click();
+  await page.waitForTimeout(200);
+  await page.getByRole('button', { name: 'Standalone' }).first().click();
+  await page.waitForTimeout(300);
+  assert.ok(await page.getByText('Target platforms').first().isVisible(), 'packaging view shown');
+  await page.getByRole('button', { name: /^macos$/ }).first().click(); // select a platform
+  await page.getByRole('button', { name: /^Save$/ }).first().click();
+  await page.waitForSelector('.toast', { timeout: 4000 });
+  const inf = readWorkspaceDoc(ws, 'infra');
+  assert.equal(inf.mode, 'standalone', 'mode persisted');
+  assert.ok((inf.packaging.platforms || []).includes('macos'), 'platform persisted');
+  assert.deepEqual(page.__errors, []);
+});
+
 test('tests Summary tab: build status + coverage + ready-for-ops persists', async (t) => {
   const app = await openApp({
     project: { name: 'Reg', repo: 'o/reg', branch: 'main', version: 'v1' },

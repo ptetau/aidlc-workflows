@@ -33,35 +33,67 @@ function validate(regions, resources) {
 }
 const SEV = { high: { pill: 'danger', color: 'var(--danger)', label: 'HIGH' }, med: { pill: 'amber', color: 'var(--amber)', label: 'MED' }, info: { pill: 'neutral', color: 'var(--ink-faint)', label: 'INFO' } };
 
+// AIDLC adapts by mode — so does this workspace. Cloud (validate above), standalone packaging, CI/CD.
+const MODES = [
+  { value: 'cloud', label: 'Cloud', title: 'Provision the cloud', desc: 'Arrange resources inside the VPC, tune scaling and exposure. The validation engine flags security and policy risks live.' },
+  { value: 'cicd', label: 'CI/CD', title: 'Deploy via pipeline', desc: 'Changes ship through an existing pipeline onto infrastructure that already exists. Define the pipeline stages and environments.' },
+  { value: 'standalone', label: 'Standalone', title: 'Package & distribute', desc: 'No cloud to provision — this ships as an executable. Pick target platforms, the artifact, signing, and how users get it.' },
+];
+const PLATFORMS = ['windows', 'macos', 'linux', 'web', 'ios', 'android'];
+const ARTIFACTS = ['single binary', 'installer', 'archive (zip/tar)', 'container image', 'package (npm/pip/crate)', 'app bundle'];
+
+function validatePackaging(p) {
+  const f = [];
+  if (!(p.platforms || []).length) f.push({ sev: 'high', msg: 'No target platform selected — there is nothing to ship.' });
+  if (!p.signed) f.push({ sev: 'med', msg: 'Artifacts are not code-signed — users may hit OS security warnings.' });
+  if (!(p.channels || []).length) f.push({ sev: 'info', msg: 'No distribution channel set — how do users obtain it?' });
+  return f;
+}
+function validatePipeline(p) {
+  const f = [];
+  if (!(p.stages || []).length) f.push({ sev: 'med', msg: 'No pipeline stages defined.' });
+  if (!(p.environments || []).length) f.push({ sev: 'info', msg: 'No deploy environments defined.' });
+  return f;
+}
+
 function InfraWS() {
   const seed = window.SEED.infra;
   const save = useSave();
-  const [regions, setRegions] = iUseState(seed.regions);
-  const [resources, setResources] = iUseState(seed.resources);
+  const [mode, setMode] = iUseState(seed.mode || 'cloud');
+  const [regions, setRegions] = iUseState(seed.regions || []);
+  const [resources, setResources] = iUseState(seed.resources || []);
   const [notes, setNotes] = iUseState(seed.notes || {});
   const [noteDraft, setNoteDraft] = iUseState(null);
+  const [packaging, setPackaging] = iUseState(() => seed.packaging || { platforms: [], artifact: '', signed: false, channels: [] });
+  const [pipeline, setPipeline] = iUseState(() => seed.pipeline || { provider: '', stages: [], environments: [] });
 
-  const findings = validate(regions, resources);
+  const findings = mode === 'cloud' ? validate(regions, resources)
+    : mode === 'standalone' ? validatePackaging(packaging)
+      : validatePipeline(pipeline);
   const worst = id => { const fs = findings.filter(f => f.res === id); if (fs.some(f => f.sev === 'high')) return 'high'; if (fs.some(f => f.sev === 'med')) return 'med'; if (fs.some(f => f.sev === 'info')) return 'info'; return null; };
   const upd = (id, patch) => setResources(rs => rs.map(r => r.id === id ? { ...r, ...patch } : r));
 
-  // editable state in SEED shape — persisted to workspace/infra.json
-  const buildState = () => ({ regions, resources, notes });
+  // editable state — persisted to workspace/infra.json (all mode sections carried through)
+  const buildState = () => ({ mode, regions, resources, notes, packaging, pipeline });
 
   const counts = { high: findings.filter(f => f.sev === 'high').length, med: findings.filter(f => f.sev === 'med').length };
+  const meta = MODES.find(m => m.value === mode) || MODES[0];
 
   return (
     <>
-      <WorkHeader eyebrow="Infrastructure & Deployment Builder" title="Provision the cloud"
-        desc="Arrange resources inside the VPC, tune scaling and exposure. The validation engine flags security and policy risks live."
+      <WorkHeader eyebrow="Infrastructure & Delivery" title={meta.title} desc={meta.desc}
         right={<>
+          <Segmented options={MODES.map(m => ({ value: m.value, label: m.label }))} value={mode} onChange={setMode} />
           <span className={`pill pill-${counts.high ? 'danger' : counts.med ? 'amber' : 'green'}`}>
             {counts.high ? `${counts.high} high risk` : counts.med ? `${counts.med} warnings` : 'no blocking risks'}
           </span>
           <Btn kind="primary" icon={I.check} onClick={() => save('infra', buildState())}>Save</Btn>
         </>} />
 
-      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      {mode === 'standalone' && <PackagingView packaging={packaging} setPackaging={setPackaging} findings={findings} />}
+      {mode === 'cicd' && <PipelineView pipeline={pipeline} setPipeline={setPipeline} findings={findings} />}
+
+      <div style={{ flex: 1, minHeight: 0, display: mode === 'cloud' ? 'flex' : 'none' }}>
         {/* canvas */}
         <div className="scroll" style={{ flex: 1, minWidth: 0, padding: 22 }}>
           {/* region bar */}
@@ -199,6 +231,124 @@ function ToggleRow({ label, on, onChange, danger }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <span style={{ fontSize: 11.5, fontWeight: 500, color: risky ? 'var(--danger)' : 'var(--ink-soft)' }}>{label}</span>
       <div style={{ marginLeft: 'auto' }}><Switch on={on} onChange={onChange} /></div>
+    </div>
+  );
+}
+
+/* shared findings pane for the non-cloud modes */
+function FindingsPane({ findings }) {
+  return (
+    <div style={{ width: 300, flex: '0 0 300px', borderLeft: '1px solid var(--line)', background: 'var(--rail)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '15px 16px 12px', borderBottom: '1px solid var(--rail-line)', display: 'flex', alignItems: 'center', gap: 9 }}>
+        <span style={{ width: 16, height: 16, display: 'flex', color: findings.some(f => f.sev === 'high') ? 'var(--danger)' : 'var(--green)' }}>{I.shield}</span>
+        <span className="eyebrow">Validation</span>
+        <span className="pill pill-neutral" style={{ marginLeft: 'auto', fontSize: 10 }}>{findings.length}</span>
+      </div>
+      <div className="scroll" style={{ flex: 1, padding: 14, display: 'flex', flexDirection: 'column', gap: 9 }}>
+        {findings.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '36px 12px', color: 'var(--green-deep)' }}>
+            <div style={{ width: 30, height: 30, margin: '0 auto 10px', display: 'flex' }}>{I.check}</div>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>All checks pass</div>
+          </div>
+        )}
+        {['high', 'med', 'info'].flatMap(sev => findings.filter(f => f.sev === sev)).map((f, i) => (
+          <div key={i} className="card" style={{ padding: '10px 12px', boxShadow: 'none', borderColor: f.sev === 'high' ? 'var(--danger)' : 'var(--line)' }}>
+            <span className={`pill pill-${SEV[f.sev].pill}`} style={{ fontSize: 9, marginBottom: 5, display: 'inline-flex' }}>{SEV[f.sev].label}</span>
+            <div style={{ fontSize: 12, lineHeight: 1.45, color: 'var(--ink)' }}>{f.msg}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* editable string list (channels, stages, environments) */
+function Chips({ items, setItems, placeholder, suggestions }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+        {(items || []).map((it, i) => (
+          <div key={i} style={{ display: 'flex', gap: 6 }}>
+            <input className="input" value={it} onChange={e => setItems(items.map((x, j) => j === i ? e.target.value : x))} style={{ fontSize: 12.5, padding: '7px 9px' }} />
+            <button onClick={() => setItems(items.filter((_, j) => j !== i))} style={{ flex: '0 0 22px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--ink-faint)' }}><span style={{ width: 13, height: 13, display: 'flex' }}>{I.x}</span></button>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <Btn kind="soft" sm icon={I.plus} onClick={() => setItems([...(items || []), ''])}>{placeholder || 'Add'}</Btn>
+        {(suggestions || []).filter(s => !(items || []).includes(s)).map(s => (
+          <button key={s} onClick={() => setItems([...(items || []), s])} className="mono" style={{ border: '1px dashed var(--line-2)', background: 'transparent', cursor: 'pointer', borderRadius: 8, padding: '5px 10px', fontSize: 11, color: 'var(--ink-faint)' }}>+ {s}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---- Standalone: packaging & distribution ---- */
+function PackagingView({ packaging, setPackaging, findings }) {
+  const p = packaging;
+  const upd = patch => setPackaging({ ...p, ...patch });
+  const togglePlatform = pl => upd({ platforms: (p.platforms || []).includes(pl) ? p.platforms.filter(x => x !== pl) : [...(p.platforms || []), pl] });
+  return (
+    <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      <div className="scroll fadein" style={{ flex: 1, minWidth: 0, padding: '22px 28px', display: 'flex', flexDirection: 'column', gap: 22, maxWidth: 720 }}>
+        <div>
+          <div className="eyebrow" style={{ marginBottom: 10 }}>Target platforms</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {PLATFORMS.map(pl => {
+              const on = (p.platforms || []).includes(pl);
+              return <button key={pl} onClick={() => togglePlatform(pl)} className="mono" style={{
+                border: `1.5px solid ${on ? 'var(--green-line)' : 'var(--line)'}`, cursor: 'pointer',
+                background: on ? 'var(--green-wash)' : 'var(--surface-2)', color: on ? 'var(--green-deep)' : 'var(--ink-faint)',
+                borderRadius: 9, padding: '8px 14px', fontSize: 12, fontWeight: 600 }}>{pl}</button>;
+            })}
+          </div>
+        </div>
+        <div>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Artifact</div>
+          <select className="select" value={p.artifact || ''} onChange={e => upd({ artifact: e.target.value })} style={{ maxWidth: 320 }}>
+            <option value="">— choose —</option>
+            {ARTIFACTS.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <div style={{ marginTop: 12 }}><ToggleRow label="Code-signed / notarized" on={!!p.signed} onChange={v => upd({ signed: v })} /></div>
+        </div>
+        <div>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Distribution channels</div>
+          <Chips items={p.channels} setItems={v => upd({ channels: v })} placeholder="Add channel"
+            suggestions={['GitHub Releases', 'Homebrew', 'Scoop', 'npm', 'PyPI', 'crates.io', 'App Store', 'direct download']} />
+        </div>
+      </div>
+      <FindingsPane findings={findings} />
+    </div>
+  );
+}
+
+/* ---- CI/CD: deploy via existing pipeline ---- */
+function PipelineView({ pipeline, setPipeline, findings }) {
+  const p = pipeline;
+  const upd = patch => setPipeline({ ...p, ...patch });
+  return (
+    <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      <div className="scroll fadein" style={{ flex: 1, minWidth: 0, padding: '22px 28px', display: 'flex', flexDirection: 'column', gap: 22, maxWidth: 720 }}>
+        <div className="card" style={{ padding: '11px 14px', boxShadow: 'none' }}>
+          <span className="mono" style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>Runs on infrastructure that already exists — aidlc produces the change; your pipeline ships it.</span>
+        </div>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: 360 }}>
+          <span className="eyebrow">Pipeline provider</span>
+          <input className="input mono" value={p.provider || ''} placeholder="GitHub Actions, GitLab CI, Jenkins…" onChange={e => upd({ provider: e.target.value })} style={{ fontSize: 12.5 }} />
+        </label>
+        <div>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Pipeline stages</div>
+          <Chips items={p.stages} setItems={v => upd({ stages: v })} placeholder="Add stage"
+            suggestions={['build', 'test', 'lint', 'package', 'deploy', 'smoke-test']} />
+        </div>
+        <div>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Environments</div>
+          <Chips items={p.environments} setItems={v => upd({ environments: v })} placeholder="Add environment"
+            suggestions={['dev', 'staging', 'production']} />
+        </div>
+      </div>
+      <FindingsPane findings={findings} />
     </div>
   );
 }

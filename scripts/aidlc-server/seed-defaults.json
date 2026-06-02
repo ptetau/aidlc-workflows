@@ -615,7 +615,30 @@
         "public": false,
         "encrypted": true
       }
-    ]
+    ],
+    "mode": "cloud",
+    "packaging": {
+      "platforms": [
+        "linux"
+      ],
+      "artifact": "container image",
+      "signed": false,
+      "channels": [
+        "GitHub Releases"
+      ]
+    },
+    "pipeline": {
+      "provider": "GitHub Actions",
+      "stages": [
+        "build",
+        "test",
+        "deploy"
+      ],
+      "environments": [
+        "staging",
+        "production"
+      ]
+    }
   },
   "tests": {
     "types": [
